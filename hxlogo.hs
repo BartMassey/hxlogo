@@ -4,15 +4,18 @@
 -- a Haskell version of xlogo
 import Control.Concurrent
 import Control.Monad
+import Data.Word
 import Graphics.XHB
 import System.IO
 
 main = do
   Just c <- connect
   _ <- handleErrors c
+  let white = getWhite c
+  let vp = toValueParam [(CWEventMask, toMask [EventMaskExposure]),
+                         (CWBackPixel, white)]
   let rw = getRoot c
   w <- newResource c
-  let vp = toValueParam [(CWEventMask, toMask [EventMaskExposure])]
   createWindow c (MkCreateWindow
                   0 w rw
                   0 0 100 100 0
@@ -25,6 +28,13 @@ main = do
   hFlush stdout
   s <- getLine
   return ()
+
+getWhite :: Connection -> Word32
+getWhite = 
+  white_pixel_SCREEN . head 
+                     . roots_Setup
+                     . connectionSetup
+    
 
 sync :: Connection -> IO ()
 sync c = do
@@ -57,8 +67,10 @@ data EventHandler =  forall a . Event a
                   => EventHandler (Connection -> WINDOW -> a -> IO ())
 
 exposeHandler :: Connection -> WINDOW -> ExposeEvent -> IO ()
-exposeHandler c w _ =
-  clearArea c (MkClearArea False w 0 0 100 100)
+exposeHandler c w e = do
+  print e
+  clearArea c (MkClearArea False w 0 0 0 0)
+  sync c
 
 tryHandleEvent :: Connection
                -> WINDOW
