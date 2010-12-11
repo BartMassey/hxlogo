@@ -1,25 +1,39 @@
 {-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 -- Copyright © 2010 Bart Massey
 -- Binary fixed point representations
-module FixedBinary (FixedBinary(..), B16_16)
+module FixedBinary (HasFixedBits(..), fromFixed, fromRealFrac, B16_16)
 where
   
-import Data.Word
 import Data.Fixed
+import Data.Ratio
+import Data.Word
 
-class FixedBinary a where
+class HasFixedBits a where
   intBits :: p a -> Word
   fracBits :: p a -> Word
-  -- XXX This will silently truncate and/or overflow
-  fromFixedBinary :: (Integral b) => Fixed a -> b
-  fromFixedBinary a = truncate (a * fromIntegral (2 ^ fracBits a))
 
-instance FixedBinary b => HasResolution b where
+instance HasFixedBits b => HasResolution b where
   resolution a = 2 ^ fracBits a
+
+-- Convert a RealFrac to a Fixed in the obvious way.
+fromRealFrac :: (RealFrac a, HasResolution b) => a -> Fixed b
+fromRealFrac a = 
+  typeify a undefined
+  where
+    typeify :: (RealFrac a, HasResolution b) => a -> Fixed b -> Fixed b
+    typeify a b = 
+      fromRational (truncate (a * fromIntegral r) % r)
+      where
+        r = resolution b
+
+-- Convert a Fixed to an integer by removing the implicit decimal point.
+-- XXX This will silently truncate and/or overflow
+fromFixed :: (HasResolution a, Integral b) => Fixed a -> b
+fromFixed a = truncate (a * fromIntegral (resolution a))
 
 data Binary16_16 = Binary16_16
 type B16_16 = Fixed Binary16_16
 
-instance FixedBinary Binary16_16 where
+instance HasFixedBits Binary16_16 where
   intBits _ = 16
   fracBits _ = 16
