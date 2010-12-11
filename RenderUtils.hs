@@ -5,7 +5,7 @@
 
 module RenderUtils (Point(..), Line(..), 
                     x1L, y1L, x2L, y2L,
-                    invSlope, xIntercept, intersection)
+                    invSlope, xIntercept, intersect)
                     
 where
 
@@ -33,21 +33,25 @@ invSlope l = (x2L l - x1L l) / (y2L l - y1L l)
 xIntercept :: RealFrac a => Line a -> a -> a
 xIntercept l invSlope = x1L l - invSlope * y1L l
                      
-intersection :: RealFrac a => Line a -> Line a -> Point a
-intersection l1 l2 = 
+-- XXX Does not protect itself against nearly-parallel lines
+intersect :: RealFrac a => Line a -> Line a -> Maybe (Point a)
+intersect l1 l2 = 
   -- x = m1y + b1
   -- x = m2y + b2
   -- m1y + b1 = m2y + b2
   -- y * (m1 - m2) = b2 - b1
   -- y = (b2 - b1) / (m1 - m2)
   let m1 = invSlope l1
-      b1 = xIntercept l1 m1
-      m2 = invSlope l2
-      b2 = xIntercept l2 m2
-      y = (b2 - b1) / (m1 - m2) in
-  MkPoint {
-    xP = m1 * y + b1,
-    yP = y }
+      m2 = invSlope l2 in
+  if m1 - m2 == 0
+  then Nothing
+  else
+      let b1 = xIntercept l1 m1
+          b2 = xIntercept l2 m2
+          y = (b2 - b1) / (m1 - m2) in
+      Just $ MkPoint {
+        xP = m1 * y + b1,
+        yP = y }
 
 -- Copyright 1988, 1998  The Open Group
 -- 
