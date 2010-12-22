@@ -18,7 +18,8 @@
 --
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
-module RenderLogo (toDrawable, logoGC, renderLogoCore, renderLogoRender)
+module RenderLogo (toDrawable, defaultScreen,
+                   logoGC, renderLogoCore, renderLogoRender)
 where
 
 import Data.Bits
@@ -31,22 +32,48 @@ import Graphics.XHB.Gen.Render
 import FixedBinary
 import RenderUtils
 
--- logoRed = (0xd2, 0x22, 0x32)
--- logoGray = (0xd7, 0xd7, 0xd7)
+logoRed :: (Word16, Word16, Word16)
+logoRed = (0xd200, 0x2200, 0x3200)
+
+logoGray :: (Word16, Word16, Word16)
+logoGray = (0xd700, 0xd700, 0xd700)
 
 toDrawable :: WINDOW -> DRAWABLE
 toDrawable = fromXid .toXid
 
+defaultScreen :: Connection -> SCREEN 
+defaultScreen = head . roots_Setup . connectionSetup
+
+colorInfo :: COLORMAP -> (Word16, Word16, Word16) -> AllocColor
+colorInfo cm (r, g, b) = MkAllocColor {
+  cmap_AllocColor = cm,
+  red_AllocColor = r,
+  green_AllocColor = g,
+  blue_AllocColor = b }
+
+-- Return foreground and background pixels for the logo colors.
+logoColors :: Connection -> IO (Word32, Word32)
+logoColors c = do
+  let cm = default_colormap_SCREEN $ defaultScreen c
+  fgColorReceipt <- allocColor c $ colorInfo cm logoGray
+  Right fgColor <- getReply fgColorReceipt
+  let fgPixel = pixel_AllocColorReply fgColor
+  bgColorReceipt <- allocColor c $ colorInfo cm logoRed
+  Right bgColor <- getReply bgColorReceipt
+  let bgPixel = pixel_AllocColorReply bgColor
+  return (fgPixel, bgPixel)
+
 logoGC :: Connection -> WINDOW -> IO GCONTEXT
 logoGC c w = do
   gc <- newResource c
---  let gcValues = toValueParam [
---        (GCForeground, fgPixel),
---        (GCBackground, bgPixel)]
+  (fgPixel, bgPixel) <- logoColors c
+  let gcValues = toValueParam [
+        (GCForeground, fgPixel),
+        (GCBackground, bgPixel)]
   let gcInfo = MkCreateGC {
         cid_CreateGC = gc,
         drawable_CreateGC = toDrawable w,
-        value_CreateGC = emptyValueParam :: ValueParam Word32 }
+        value_CreateGC = gcValues }
   createGC c gcInfo
   return gc
 

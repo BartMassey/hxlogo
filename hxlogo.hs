@@ -35,9 +35,7 @@ main = do
 
 getWhite :: Connection -> Word32
 getWhite = 
-  white_pixel_SCREEN . head 
-                     . roots_Setup
-                     . connectionSetup
+  white_pixel_SCREEN . defaultScreen
     
 
 sync :: Connection -> IO ()
