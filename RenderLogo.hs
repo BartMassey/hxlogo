@@ -24,7 +24,7 @@ import Graphics.XHB.Gen.Render
 
 import RenderUtils
 
-renderLogo :: Connection -> Int -> PICTURE -> PICTURE -> PICTFORMINFO
+renderLogo :: Connection -> PictOp -> PICTURE -> PICTURE -> PICTFORMINFO
                          -> Word32 -> Word32 -> Word32 -> Word32 -> IO ()
 renderLogo c op src dst maskFormat x y width height = do
   -- do a centered even-sized square, at least for now
@@ -78,7 +78,7 @@ renderLogo c op src dst maskFormat x y width height = do
   where
     renderPoly :: [Double] -> IO ()
     renderPoly p =
-      renderCompositePoly c op src dst maskFormat 0 0 0 0 p 0
+      renderCompositePoly c op src dst maskFormat 0 0 0 0 p
 
 -- Copyright 1988, 1998  The Open Group
 -- 
