@@ -27,7 +27,7 @@ instance Real a => Ord (Line a) where
   l1 `compare` l2 = 
     pOrd l1 `compare` pOrd l2
     where
-      pOrd l = (p1L l, p2L l)
+      pOrd l = (y1L l, x1L l, x2L l)
 
 x1L :: Real a => Line a -> a
 x1L = xP . p1L
