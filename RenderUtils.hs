@@ -6,23 +6,30 @@
 module RenderUtils (Point(..), Line(..), 
                     x1L, y1L, x2L, y2L,
                     invSlope, xIntercept, intersect)
-                    
 where
+  
+import Data.List (sort)  
 
-data Point a = MkPoint { xP :: a, yP :: a }
+data RealFrac a => Point a = Point { xP :: a, yP :: a } deriving Eq
 
-data Line a = MkLine { p1L :: Point a, p2L :: Point a }
+instance RealFrac a => Ord (Point a) where
+  p1 `compare` p2 = (yP p1, xP p1) `compare` (yP p2, xP p2)
 
-x1L :: Line a -> a
+data RealFrac a => Line a = Line { p1L :: Point a, p2L :: Point a } deriving Eq
+
+instance RealFrac a => Ord (Line a) where
+  l1 `compare` l2 = (p1L l1, p2L l1) `compare` (p1L l2, p2L l2)
+
+x1L :: RealFrac a => Line a -> a
 x1L = xP . p1L
 
-y1L :: Line a -> a
+y1L :: RealFrac a => Line a -> a
 y1L = yP . p1L
 
-x2L :: Line a -> a
+x2L :: RealFrac a => Line a -> a
 x2L = xP . p2L
 
-y2L :: Line a -> a
+y2L :: RealFrac a => Line a -> a
 y2L = yP . p2L
 
 -- The rest of this file is TOG-derived
@@ -31,7 +38,7 @@ invSlope :: RealFrac a => Line a -> a
 invSlope l = (x2L l - x1L l) / (y2L l - y1L l)
 
 xIntercept :: RealFrac a => Line a -> a -> a
-xIntercept l invSlope = x1L l - invSlope * y1L l
+xIntercept l is = x1L l - is * y1L l
                      
 -- XXX Does not protect itself against nearly-parallel lines
 intersect :: RealFrac a => Line a -> Line a -> Maybe (Point a)
@@ -49,9 +56,49 @@ intersect l1 l2 =
       let b1 = xIntercept l1 m1
           b2 = xIntercept l2 m2
           y = (b2 - b1) / (m1 - m2) in
-      Just $ MkPoint {
+      Just $ Point {
         xP = m1 * y + b1,
         yP = y }
+
+-- XXX Does not protect itself against horizontal lines
+computeX :: RealFrac a => Line a -> a -> a
+computeX line y =
+  let dx = x2L line - x1L line in
+  let ex = (y - y1L line) * dx in
+  let dy = y2L line - y1L line in
+  x1L line + ex / dy
+      
+data RealFrac a => Trap a = Trap {
+  y1 :: a,
+  y2 :: a,
+  x11 :: a,
+  x12 :: a,
+  x21 :: a,
+  x22 :: a }
+
+polyEdges :: RealFrac a => [Point a] -> [Line a]
+polyEdges =
+  sort . map orderEdge . filter nonHorizontal . makeEdges . close
+  where
+    close [] = error "empty poly"
+    close ps@(p : _) = ps ++ [p]
+    makeEdges [] = error "internal error: empty poly"
+    makeEdges [_] = []
+    makeEdges (p1 : p2 : ps) =
+      Line p1 p2 : makeEdges (p2 : ps)
+    nonHorizontal edge = 
+      y1L edge /= y2L edge
+    orderEdge edge
+      | p1L edge < p2L edge = edge
+      | otherwise = Line (p2L edge) (p1L edge)
+
+{-
+-- XXX Even-odd fill rule only for now
+    [] -> []
+    [_] -> error "unpaired edge"
+    es@(e1 : _) ->
+      takeWhile ((y1L e1 ==) . y1L) es
+-}
 
 -- Copyright 1988, 1998  The Open Group
 -- 
