@@ -42,12 +42,12 @@ y2L :: Real a => Line a -> a
 y2L = yP . p2L
 
 data Real a => Trap a = Trap {
-  y1 :: a,
-  y2 :: a,
-  x11 :: a,
-  x12 :: a,
-  x21 :: a,
-  x22 :: a }
+  y1T :: a,
+  y2T :: a,
+  x11T :: a,
+  x12T :: a,
+  x21T :: a,
+  x22T :: a }
 
 polyEdges :: Real a => [Point a] -> [Line a]
 polyEdges =
@@ -70,40 +70,43 @@ polyEdgeTraps :: RealFrac a => [Line a] -> [Trap a]
 polyEdgeTraps [] = []
 polyEdgeTraps [_] = error "unpaired edge"
 polyEdgeTraps (e1 : e2 : es)
+  | y1L e1 /= y1L e2 = error "mispaired edge"
   | y2L e1 == y2L e2 =
     Trap {
-      y1 = y1L e1,
-      y2 = y2L e1,
-      x11 = x1L e1,
-      x12 = x1L e2,
-      x21 = x2L e1,      
-      x22 = x2L e2 } : 
+      y1T = y1L e1,
+      y2T = y2L e1,
+      x11T = x1L e1,
+      x12T = x1L e2,
+      x21T = x2L e1,      
+      x22T = x2L e2 } : 
     polyEdgeTraps es
   | y2L e1 < y2L e2 =
-    let y2' = y2L e1 in
-    let im = invSlope e2 in
-    let x2 = y2' * im / y2L e2 in
+    let x2 = x1L e2
+        y1 = y1L e1
+        y2 = y2L e1 in
+    let x2' = x2 + (y2 - y1) * (x2L e2 - x2) / (y2L e2 - y1) in
     Trap {
-      y1 = y1L e1,
-      y2 = y2',
-      x11 = x1L e1,
-      x12 = x1L e2,
-      x21 = x2L e1,      
-      x22 = x2 } : 
-    polyEdgeTraps (insertLine (Line (p1L e2) (Point x2 y2')) es)
+      y1T = y1,
+      y2T = y2,
+      x11T = x1L e1,
+      x12T = x2,
+      x21T = x2L e1,
+      x22T = x2' } : 
+    polyEdgeTraps (insertLine (Line (Point x2' y2) (p2L e2)) es)
   | otherwise =
-    let y2' = y2L e2 in
-    let im = invSlope e1 in
-    let x1 = y2' * im / y2L e1 in
+    let x1 = x1L e1
+        y1 = y1L e2
+        y2 = y2L e2 in
+    let x1' = x1 + (y2 - y1) * (x2L e1 - x1) / (y2L e1 - y1) in
     Trap {
-      y1 = y1L e1,
-      y2 = y2',
-      x11 = x1L e1,
-      x12 = x1L e2,
-      x21 = x1,      
-      x22 = x2L e2 } : 
-    polyEdgeTraps (insertLine (Line (Point x1 y2') (p2L e2)) es)
-        
+      y1T = y1,
+      y2T = y2,
+      x11T = x1,
+      x12T = x1L e2,
+      x21T = x1',
+      x22T = x2L e2 } : 
+    polyEdgeTraps (insertLine (Line (Point x1' y2) (p2L e1)) es)
+
 -- Put the line into the list in its proper place.
 insertLine :: Real a => Line a -> [Line a] -> [Line a]
 insertLine l [] = [l]
@@ -138,16 +141,6 @@ intersect l1 l2 =
       Just $ Point {
         xP = m1 * y + b1,
         yP = y }
-
--- Does not protect itself against horizontal lines, which
--- is OK in this application.
-computeX :: RealFrac a => Line a -> a -> a
-computeX line y =
-  let dx = x2L line - x1L line in
-  let ex = (y - y1L line) * dx in
-  let dy = y2L line - y1L line in
-  x1L line + ex / dy
-      
 
 -- Copyright 1988, 1998  The Open Group
 -- 
