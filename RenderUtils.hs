@@ -6,7 +6,7 @@
 module RenderUtils (Point(..), Line(..), Trap(..),
                     x1L, y1L, x2L, y2L,
                     invSlope, xIntercept, intersect,
-                    polyEdges, polyEdgeTraps)
+                    polyEdges, polyTraps)
 where
   
 import Data.List (sort)  
@@ -49,6 +49,8 @@ data Real a => Trap a = Trap {
   x21T :: a,
   x22T :: a }
 
+-- Trace around the polygon and close it off by connecting
+-- the last point to the first.
 polyEdges :: Real a => [Point a] -> [Line a]
 polyEdges =
   sort . map orderEdge . filter nonHorizontal . makeEdges . close
@@ -65,7 +67,22 @@ polyEdges =
       | p1L edge < p2L edge = edge
       | otherwise = Line (p2L edge) (p1L edge)
 
--- Assumes a simple polygon.
+-- Given the edge list of a simple polygon, walk the
+-- edges off in increasing starting y / increasing starting x
+-- order. Because the polygon is simple, you'll get pairs of
+-- non-horizontal edges that start at a given y with least x:
+-- these define the top of your trapezoid. Take the first pair,
+-- clip off the rest of the trapezoid at the smaller ending y,
+-- and place the unused portion of the lower edge back on the
+-- edge list in its proper position. Repeat until no more edges
+-- are available.
+-- 
+-- This traversal corresponds to the "odd-even fill rule". It
+-- would only be a little more work to do "nonzero-winding", but
+-- I don't need it and don't want to think about it right now.
+-- Besides, I'd need to think about non-simple polygons and this
+-- code anyhow: it would need at minimum to deal with "crossed"
+-- traps.
 polyEdgeTraps :: RealFrac a => [Line a] -> [Trap a]
 polyEdgeTraps [] = []
 polyEdgeTraps [_] = error "unpaired edge"
@@ -106,6 +123,9 @@ polyEdgeTraps (e1 : e2 : es)
       x21T = x1',
       x22T = x2L e2 } : 
     polyEdgeTraps (insertLine (Line (Point x1' y2) (p2L e1)) es)
+
+polyTraps :: RealFrac a => [Point a] -> [Trap a]
+polyTraps = polyEdgeTraps . polyEdges
 
 -- Put the line into the list in its proper place.
 insertLine :: Real a => Line a -> [Line a] -> [Line a]
