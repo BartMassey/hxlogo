@@ -14,17 +14,17 @@ main :: IO ()
 main = do
   Just c <- connect
   _ <- handleErrors c
-  let white = getWhite c
-  let vp = toValueParam [(CWEventMask, toMask [EventMaskExposure]),
-                         (CWBackPixel, white)]
-  let rw = getRoot c
+  pixels <- logoPixels c
   w <- newResource c
+  let rw = getRoot c
+  let vp = toValueParam [(CWEventMask, toMask [EventMaskExposure]),
+                         (CWBackPixel, bgPixel pixels)]
   createWindow c (MkCreateWindow
                   0 w rw
                   0 0 100 100 0
                   WindowClassInputOutput 0
                   vp)
-  gc <- logoGC c w
+  gc <- logoGC c w pixels
   _ <- handleEvents c w gc
   mapWindow c w
   sync c
@@ -32,11 +32,6 @@ main = do
   hFlush stdout
   _ <- getLine
   return ()
-
-getWhite :: Connection -> Word32
-getWhite = 
-  white_pixel_SCREEN . defaultScreen
-    
 
 sync :: Connection -> IO ()
 sync c = do
@@ -71,7 +66,6 @@ data EventHandler =  forall a . Event a
 exposeHandler :: GCONTEXT -> Connection -> WINDOW -> ExposeEvent -> IO ()
 exposeHandler gc c w e = do
   print e
-  clearArea c (MkClearArea False w 0 0 0 0)
   renderLogoCore c w gc 100 100
   sync c
 

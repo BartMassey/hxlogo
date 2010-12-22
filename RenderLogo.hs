@@ -19,7 +19,8 @@
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
 module RenderLogo (toDrawable, defaultScreen,
-                   logoGC, renderLogoCore, renderLogoRender)
+                   LogoPixels(..), logoPixels, logoGC, 
+                   renderLogoCore, renderLogoRender)
 where
 
 import Data.Bits
@@ -51,25 +52,28 @@ colorInfo cm (r, g, b) = MkAllocColor {
   green_AllocColor = g,
   blue_AllocColor = b }
 
+data LogoPixels = LogoPixels {
+  fgPixel :: Word32, 
+  bgPixel :: Word32 }
+
 -- Return foreground and background pixels for the logo colors.
-logoColors :: Connection -> IO (Word32, Word32)
-logoColors c = do
+logoPixels :: Connection -> IO LogoPixels
+logoPixels c = do
   let cm = default_colormap_SCREEN $ defaultScreen c
   fgColorReceipt <- allocColor c $ colorInfo cm logoGray
   Right fgColor <- getReply fgColorReceipt
-  let fgPixel = pixel_AllocColorReply fgColor
+  let fg = pixel_AllocColorReply fgColor
   bgColorReceipt <- allocColor c $ colorInfo cm logoRed
   Right bgColor <- getReply bgColorReceipt
-  let bgPixel = pixel_AllocColorReply bgColor
-  return (fgPixel, bgPixel)
+  let bg = pixel_AllocColorReply bgColor
+  return $ LogoPixels fg bg
 
-logoGC :: Connection -> WINDOW -> IO GCONTEXT
-logoGC c w = do
+logoGC :: Connection -> WINDOW -> LogoPixels -> IO GCONTEXT
+logoGC c w (LogoPixels fg bg) = do
   gc <- newResource c
-  (fgPixel, bgPixel) <- logoColors c
   let gcValues = toValueParam [
-        (GCForeground, fgPixel),
-        (GCBackground, bgPixel)]
+        (GCForeground, fg),
+        (GCBackground, bg)]
   let gcInfo = MkCreateGC {
         cid_CreateGC = gc,
         drawable_CreateGC = toDrawable w,
@@ -77,8 +81,9 @@ logoGC c w = do
   createGC c gcInfo
   return gc
 
-logoPoly :: Word16 -> Word16 -> [[Point Double]]
-logoPoly width height =
+-- This is the transliterated code from XLogo.
+logoPolys :: Word16 -> Word16 -> [[Point Double]]
+logoPolys width height =
   -- do a centered even-sized square, at least for now
   let isize = (width `min` height) .&. complement 1 in
   let x = fromIntegral $ (width - isize) `div` 2
@@ -126,12 +131,13 @@ logoPoly width height =
                     p2L thickLeft,
                     p2L thickRight,
                     fromJust $ intersect thickRight thinRight ] in
-  [closePoly leftPoly, closePoly rightPoly]
+  [leftPoly, rightPoly]
 
 renderLogoCore :: Connection -> WINDOW -> GCONTEXT ->
                   Word16 -> Word16 -> IO ()
 renderLogoCore c w gc width height = do
-  mapM_ renderPoly $ logoPoly width height
+  clearArea c (MkClearArea False w 0 0 0 0)
+  mapM_ renderPoly $ logoPolys width height
   where
     renderPoly :: [Point Double] -> IO ()
     renderPoly poly = do
@@ -149,7 +155,7 @@ renderLogoCore c w gc width height = do
 
 renderLogoRender :: Connection -> WINDOW -> Word16 -> Word16 -> IO ()
 renderLogoRender c w width height = do
-  mapM_ renderPoly $ logoPoly width height
+  mapM_ (renderPoly . closePoly) $ logoPolys width height
   where
     renderPoly :: [Point Double] -> IO ()
     renderPoly poly = do
