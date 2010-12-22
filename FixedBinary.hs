@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 -- Copyright © 2010 Bart Massey
 -- Binary fixed point representations
-module FixedBinary (HasFixedBits(..), fromFixed, fromRealFrac, B16_16)
+module FixedBinary (HasFixedBits(..), fromFixed, fromRealFrac, B16_16, B24_8)
 where
   
 import Data.Fixed
@@ -37,3 +37,10 @@ type B16_16 = Fixed Binary16_16
 instance HasFixedBits Binary16_16 where
   intBits _ = 16
   fracBits _ = 16
+
+data Binary24_8 = Binary24_8
+type B24_8 = Fixed Binary24_8
+
+instance HasFixedBits Binary24_8 where
+  intBits _ = 24
+  fracBits _ = 8
