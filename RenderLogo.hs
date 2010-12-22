@@ -136,7 +136,7 @@ logoPolys width height =
 renderLogoCore :: Connection -> WINDOW -> GCONTEXT ->
                   Word16 -> Word16 -> IO ()
 renderLogoCore c w gc width height = do
-  clearArea c (MkClearArea False w 0 0 0 0)
+  clearArea c (MkClearArea False w 0 0 width height)
   mapM_ renderPoly $ logoPolys width height
   where
     renderPoly :: [Point Double] -> IO ()

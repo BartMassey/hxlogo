@@ -4,11 +4,15 @@
 -- a Haskell version of xlogo
 import Control.Concurrent
 import Control.Monad
-import Data.Word
 import Graphics.XHB
-import System.IO
 
 import RenderLogo
+
+data EventContext = EventContext {
+    connection_EventContext :: Connection, 
+    window_EventContext :: WINDOW, 
+    gc_EventContext :: GCONTEXT }
+
 
 main :: IO ()
 main = do
@@ -24,14 +28,13 @@ main = do
                   0 0 100 100 0
                   WindowClassInputOutput 0
                   vp)
-  gc <- logoGC c w pixels
-  _ <- handleEvents c w gc
   mapWindow c w
   sync c
-  putStr "> "
-  hFlush stdout
-  _ <- getLine
-  return ()
+  gc <- logoGC c w pixels
+  handleEvents $ EventContext {
+    connection_EventContext = c, 
+    window_EventContext = w, 
+    gc_EventContext = gc }
 
 sync :: Connection -> IO ()
 sync c = do
@@ -50,32 +53,37 @@ showError e = show e
 -- http://community.haskell.org/~aslatter/code/xhb/Demo.hs  
 -- Now munged beyond recognition
 
-handleEvents :: Connection -> WINDOW -> GCONTEXT -> IO ThreadId
-handleEvents c w gc = forkIO $ forever $ do
-  e <- waitForEvent c
-  handleEvent c w gc e
+handleEvents :: EventContext -> IO ()
+handleEvents ctx = forever $ do
+  e <- waitForEvent (connection_EventContext ctx)
+  handleEvent ctx e
 
-handleEvent :: Connection -> WINDOW -> GCONTEXT -> SomeEvent -> IO ()
-handleEvent c w gc ev = tryHandleEvent c w ev hs
+data EventHandler =  forall a . Event a => EventHandler (a -> IO ())
+
+handleEvent :: EventContext -> SomeEvent -> IO ()
+handleEvent ctx ev = 
+  tryHandleEvent ev hs
   where 
-    hs = [EventHandler (exposeHandler gc)]
+    hs = [EventHandler (exposeHandler ctx)]
 
-data EventHandler =  forall a . Event a 
-                  => EventHandler (Connection -> WINDOW -> a -> IO ())
-
-exposeHandler :: GCONTEXT -> Connection -> WINDOW -> ExposeEvent -> IO ()
-exposeHandler gc c w e = do
-  print e
-  renderLogoCore c w gc 100 100
-  sync c
-
-tryHandleEvent :: Connection
-               -> WINDOW
-               -> SomeEvent 
-               -> [EventHandler] 
-               -> IO ()
-tryHandleEvent _ _ _ [] = return ()
-tryHandleEvent c w ev (EventHandler fn : hs) = do
+tryHandleEvent :: SomeEvent -> [EventHandler] -> IO ()
+tryHandleEvent _ [] = return ()
+tryHandleEvent ev (EventHandler fn : hs) = do
   case fromEvent ev of
-    Just ev'' -> fn c w ev''
-    _ -> tryHandleEvent c w ev hs
+    Just ev' -> fn ev'
+    _ -> tryHandleEvent ev hs
+
+exposeHandler :: EventContext -> ExposeEvent -> IO ()
+exposeHandler ctx e = do
+  print e
+  renderLogoCore 
+    (connection_EventContext ctx) 
+    (window_EventContext ctx) 
+    (gc_EventContext ctx) 
+    100 100
+  sync (connection_EventContext ctx)
+
+-- closeHandler :: EventContext -> ClientMessageEvent -> IO ()
+-- closeHandler ctx e = do
+--   let ClientData32 (message : _) = data_ClientMessageEvent e
+  
