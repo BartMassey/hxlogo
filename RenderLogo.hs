@@ -18,67 +18,130 @@
 --
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
+module RenderLogo
+where
+
+import Data.Bits
+import Data.List (find)
+import Data.Maybe (fromJust)
 import Data.Word
 import Graphics.XHB
 import Graphics.XHB.Gen.Render
 
+import FixedBinary
 import RenderUtils
 
-renderLogo :: Connection -> PictOp -> PICTURE -> PICTURE -> PICTFORMINFO
-                         -> Word32 -> Word32 -> Word32 -> Word32 -> IO ()
-renderLogo c op src dst maskFormat x y width height = do
+toDrawable :: WINDOW -> DRAWABLE
+toDrawable = fromXid .toXid
+
+renderLogo :: Connection -> WINDOW -> Word32 -> Word32 -> IO ()
+renderLogo c w width height = do
   -- do a centered even-sized square, at least for now
-  let size = (width `min` height) .&. complement 1
-  let x' = (width - size) `div` 2
-  let y' = (height - size) `div` 2
+  let isize = (width `min` height) .&. complement 1
+  let x = fromIntegral $ (width - isize) `div` 2
+  let y = fromIntegral $ (height - isize) `div` 2
+  let size = (fromIntegral isize)
   -- get some fundamental sizes
-  let thin = fromIntegral size / 11.0
-  let thick = fromIntegral size / 4.0
+  let thin = size / 11.0
+  let thick = size / 4.0
   let gap = thin / 4.0
   let d31 = thin + thin + gap
   -- set up the segments
   let thickLeft = 
-        MkLine
-         (MkPoint x y)
-         (MkPoint (x + size - thick) (y + size))
+        Line
+         (Point x y)
+         (Point (x + size - thick) (y + size)) :: Line Double
   let thickRight = 
-        MkLine
-         (MkPoint (x + thick) y)
-         (MkPoint (x + size) (y + size))
+        Line
+         (Point (x + thick) y)
+         (Point (x + size) (y + size))
   let thinLeft = 
-        MkLine
-         (MkPoint (x + size - d31) y)
-         (MkPoint x (y + size))
+        Line
+         (Point (x + size - d31) y)
+         (Point x (y + size))
   let thinRight = 
-        MkLine
-         (MkPoint (x + size) y)
-         (MkPoint (x + d31) (y + size))
+        Line
+         (Point (x + size) y)
+         (Point (x + d31) (y + size))
   let gapLeft = 
-        MkLine
-         (MkPoint (x + size - (thin + gap)) y)
-         (MkPoint thin (y + size))
+        Line
+         (Point (x + size - (thin + gap)) y)
+         (Point thin (y + size))
   let gapRight = 
-        MkLine
-         (MkPoint (x + size - thin) y)
-         (MkPoint (x + thin + gap) (y + size))
+        Line
+         (Point (x + size - thin) y)
+         (Point (x + thin + gap) (y + size))
   -- left polygon
-  renderPoly [ p1 thickLeft, 
-               p1 thickRight,
+  renderPoly [ p1L thickLeft, 
+               p1L thickRight,
                fromJust $ intersect thickRight gapLeft,
-               p2 gapLeft,
-               p2 thinLeft,
+               p2L gapLeft,
+               p2L thinLeft,
                fromJust $ intersect thickLeft thinLeft ]
   -- right polygon
-  renderPoly [ p1 thinRight,
-               p1 gapRight,
+  renderPoly [ p1L thinRight,
+               p1L gapRight,
                fromJust $ intersect thickLeft gapRight,
-               p2 thickLeft,
-               p2 thickRight,
+               p2L thickLeft,
+               p2L thickRight,
                fromJust $ intersect thickRight thinRight ]
   where
-    renderPoly :: [Double] -> IO ()
-    renderPoly p =
-      renderCompositePoly c op src dst maskFormat 0 0 0 0 p
+    renderPoly :: [Point Double] -> IO ()
+    renderPoly poly = do
+      pictureFormat <- findPictureFormat c w
+      pictureId <- newResource c
+      let pictureValue = emptyValueParam
+      let picture = MkCreatePicture {
+            pid_CreatePicture = pictureId,
+            drawable_CreatePicture = toDrawable w,
+            format_CreatePicture = pictureFormat,
+            value_CreatePicture = pictureValue }
+      createPicture c picture
+      let traps = MkAddTraps {
+            picture_AddTraps = pictureId,
+            x_off_AddTraps = 0,
+            y_off_AddTraps = 0,
+            traps_AddTraps = map convertTrap $ polyTraps poly }
+      addTraps c traps
+      where
+        convertTrap :: Trap Double -> TRAP
+        convertTrap (Trap {
+                        y1T = y1,
+                        y2T = y2,
+                        x11T = x11,
+                        x12T = x12,
+                        x21T = x21,
+                        x22T = x22 }) =
+          MkTRAP {
+            top_TRAP = MkSPANFIX {
+              l_SPANFIX = toFIXED x11,
+              r_SPANFIX = toFIXED x12,
+              y_SPANFIX = toFIXED y1 },
+            bot_TRAP = MkSPANFIX {
+              l_SPANFIX = toFIXED x21,
+              r_SPANFIX = toFIXED x22,
+              y_SPANFIX = toFIXED y2 }}
+          where
+            toFIXED :: Double -> FIXED
+            toFIXED = 
+              ff . fromRealFrac
+              where
+                ff :: B24_8 -> FIXED
+                ff = fromFixed
+
+findPictureFormat :: Connection -> WINDOW -> IO PICTFORMAT
+findPictureFormat c w = do
+  waReceipt <- getWindowAttributes c w
+  Right wa <- getReply waReceipt
+  let visual = visual_GetWindowAttributesReply wa
+  pfReceipt <- queryPictFormats c
+  Right pf <- getReply pfReceipt
+  let pss = screens_QueryPictFormatsReply pf
+  let pds = concatMap depths_PICTSCREEN pss
+  let pvs = concatMap visuals_PICTDEPTH pds
+  let Just pv = find ((visual ==) . visual_PICTVISUAL) pvs
+  return $ format_PICTVISUAL pv
+
 
 -- Copyright 1988, 1998  The Open Group
 -- 
