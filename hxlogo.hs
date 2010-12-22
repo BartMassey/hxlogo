@@ -24,12 +24,7 @@ main = do
                   0 0 100 100 0
                   WindowClassInputOutput 0
                   vp)
-  gc <- newResource c
-  let gcInfo = MkCreateGC {
-        cid_CreateGC = gc,
-        drawable_CreateGC = toDrawable w,
-        value_CreateGC = emptyValueParam :: ValueParam Word32 }
-  createGC c gcInfo
+  gc <- logoGC c w
   _ <- handleEvents c w gc
   mapWindow c w
   sync c

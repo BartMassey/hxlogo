@@ -18,7 +18,7 @@
 --
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
-module RenderLogo (toDrawable, renderLogoCore, renderLogoRender)
+module RenderLogo (toDrawable, logoGC, renderLogoCore, renderLogoRender)
 where
 
 import Data.Bits
@@ -31,8 +31,24 @@ import Graphics.XHB.Gen.Render
 import FixedBinary
 import RenderUtils
 
+-- logoRed = (0xd2, 0x22, 0x32)
+-- logoGray = (0xd7, 0xd7, 0xd7)
+
 toDrawable :: WINDOW -> DRAWABLE
 toDrawable = fromXid .toXid
+
+logoGC :: Connection -> WINDOW -> IO GCONTEXT
+logoGC c w = do
+  gc <- newResource c
+--  let gcValues = toValueParam [
+--        (GCForeground, fgPixel),
+--        (GCBackground, bgPixel)]
+  let gcInfo = MkCreateGC {
+        cid_CreateGC = gc,
+        drawable_CreateGC = toDrawable w,
+        value_CreateGC = emptyValueParam :: ValueParam Word32 }
+  createGC c gcInfo
+  return gc
 
 logoPoly :: Word16 -> Word16 -> [[Point Double]]
 logoPoly width height =
@@ -92,16 +108,17 @@ renderLogoCore c w gc width height = do
   where
     renderPoly :: [Point Double] -> IO ()
     renderPoly poly = do
-      let polyInfo = MkPolyLine {
-            coordinate_mode_PolyLine = CoordModeOrigin,
-            drawable_PolyLine = toDrawable w,
-            gc_PolyLine = gc,
-            points_PolyLine = map fixupPoint poly }
+      let polyInfo = MkFillPoly {
+            drawable_FillPoly = toDrawable w,
+            gc_FillPoly = gc,
+            shape_FillPoly = PolyShapeNonconvex,
+            coordinate_mode_FillPoly = CoordModeOrigin,
+            points_FillPoly = map fixupPoint poly }
             where
               fixupPoint :: Point Double -> POINT
               fixupPoint (Point x y) =
                 MkPOINT (round x) (round y)
-      polyLine c polyInfo
+      fillPoly c polyInfo
 
 renderLogoRender :: Connection -> WINDOW -> Word16 -> Word16 -> IO ()
 renderLogoRender c w width height = do
@@ -150,10 +167,10 @@ renderLogoRender c w width height = do
                 ff :: B24_8 -> FIXED
                 ff = fromFixed
 
-showPoly :: String -> [Point Double] -> IO ()
-showPoly name poly = do
-  putStr $ name ++ ": "
-  print $ map (\(Point x y) -> (x, y)) poly
+-- showPoly :: String -> [Point Double] -> IO ()
+-- showPoly name poly = do
+--   putStr $ name ++ ": "
+--   print $ map (\(Point x y) -> (x, y)) poly
 
 findPictureFormat :: Connection -> WINDOW -> IO PICTFORMAT
 findPictureFormat c w = do
