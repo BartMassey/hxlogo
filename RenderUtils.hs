@@ -3,44 +3,123 @@
 -- See the end of this file for license information
 -- and original copyright notice.
 
-module RenderUtils (Point(..), Line(..), 
+module RenderUtils (Point(..), Line(..), Trap(..),
                     x1L, y1L, x2L, y2L,
-                    invSlope, xIntercept, intersect)
+                    invSlope, xIntercept, intersect,
+                    polyEdges, polyEdgeTraps)
 where
   
 import Data.List (sort)  
 
-data RealFrac a => Point a = Point { xP :: a, yP :: a } deriving Eq
+data Real a => Point a = 
+  Point { xP :: a, yP :: a } deriving Eq
 
-instance RealFrac a => Ord (Point a) where
-  p1 `compare` p2 = (yP p1, xP p1) `compare` (yP p2, xP p2)
+instance Real a => Ord (Point a) where
+  p1 `compare` p2 = 
+    cOrd p1 `compare` cOrd p2
+    where
+      cOrd p = (yP p, xP p)
 
-data RealFrac a => Line a = Line { p1L :: Point a, p2L :: Point a } deriving Eq
+data Real a => Line a = 
+  Line { p1L :: Point a, p2L :: Point a } deriving Eq
 
-instance RealFrac a => Ord (Line a) where
-  l1 `compare` l2 = (p1L l1, p2L l1) `compare` (p1L l2, p2L l2)
+instance Real a => Ord (Line a) where
+  l1 `compare` l2 = 
+    pOrd l1 `compare` pOrd l2
+    where
+      pOrd l = (p1L l, p2L l)
 
-x1L :: RealFrac a => Line a -> a
+x1L :: Real a => Line a -> a
 x1L = xP . p1L
 
-y1L :: RealFrac a => Line a -> a
+y1L :: Real a => Line a -> a
 y1L = yP . p1L
 
-x2L :: RealFrac a => Line a -> a
+x2L :: Real a => Line a -> a
 x2L = xP . p2L
 
-y2L :: RealFrac a => Line a -> a
+y2L :: Real a => Line a -> a
 y2L = yP . p2L
 
+data Real a => Trap a = Trap {
+  y1 :: a,
+  y2 :: a,
+  x11 :: a,
+  x12 :: a,
+  x21 :: a,
+  x22 :: a }
+
+polyEdges :: Real a => [Point a] -> [Line a]
+polyEdges =
+  sort . map orderEdge . filter nonHorizontal . makeEdges . close
+  where
+    close [] = error "empty poly"
+    close ps@(p : _) = ps ++ [p]
+    makeEdges [] = error "internal error: empty poly"
+    makeEdges [_] = []
+    makeEdges (p1 : p2 : ps) =
+      Line p1 p2 : makeEdges (p2 : ps)
+    nonHorizontal edge = 
+      y1L edge /= y2L edge
+    orderEdge edge
+      | p1L edge < p2L edge = edge
+      | otherwise = Line (p2L edge) (p1L edge)
+
+-- Assumes a simple polygon.
+polyEdgeTraps :: RealFrac a => [Line a] -> [Trap a]
+polyEdgeTraps [] = []
+polyEdgeTraps [_] = error "unpaired edge"
+polyEdgeTraps (e1 : e2 : es)
+  | y2L e1 == y2L e2 =
+    Trap {
+      y1 = y1L e1,
+      y2 = y2L e1,
+      x11 = x1L e1,
+      x12 = x1L e2,
+      x21 = x2L e1,      
+      x22 = x2L e2 } : 
+    polyEdgeTraps es
+  | y2L e1 < y2L e2 =
+    let y2' = y2L e1 in
+    let im = invSlope e2 in
+    let x2 = y2' * im / y2L e2 in
+    Trap {
+      y1 = y1L e1,
+      y2 = y2',
+      x11 = x1L e1,
+      x12 = x1L e2,
+      x21 = x2L e1,      
+      x22 = x2 } : 
+    polyEdgeTraps (insertLine (Line (p1L e2) (Point x2 y2')) es)
+  | otherwise =
+    let y2' = y2L e2 in
+    let im = invSlope e1 in
+    let x1 = y2' * im / y2L e1 in
+    Trap {
+      y1 = y1L e1,
+      y2 = y2',
+      x11 = x1L e1,
+      x12 = x1L e2,
+      x21 = x1,      
+      x22 = x2L e2 } : 
+    polyEdgeTraps (insertLine (Line (Point x1 y2') (p2L e2)) es)
+        
+-- Put the line into the list in its proper place.
+insertLine :: Real a => Line a -> [Line a] -> [Line a]
+insertLine l [] = [l]
+insertLine l el@(e : es)
+  | e < l = e : insertLine l es
+  | otherwise = l : el
+  
 -- The rest of this file is TOG-derived
 
 invSlope :: RealFrac a => Line a -> a
 invSlope l = (x2L l - x1L l) / (y2L l - y1L l)
 
-xIntercept :: RealFrac a => Line a -> a -> a
-xIntercept l is = x1L l - is * y1L l
+xIntercept :: Real a => Line a -> a -> a
+xIntercept l m = x1L l - m * y1L l
                      
--- XXX Does not protect itself against nearly-parallel lines
+-- XXX Does not protect itself against nearly-parallel lines.
 intersect :: RealFrac a => Line a -> Line a -> Maybe (Point a)
 intersect l1 l2 = 
   -- x = m1y + b1
@@ -60,7 +139,8 @@ intersect l1 l2 =
         xP = m1 * y + b1,
         yP = y }
 
--- XXX Does not protect itself against horizontal lines
+-- Does not protect itself against horizontal lines, which
+-- is OK in this application.
 computeX :: RealFrac a => Line a -> a -> a
 computeX line y =
   let dx = x2L line - x1L line in
@@ -68,37 +148,6 @@ computeX line y =
   let dy = y2L line - y1L line in
   x1L line + ex / dy
       
-data RealFrac a => Trap a = Trap {
-  y1 :: a,
-  y2 :: a,
-  x11 :: a,
-  x12 :: a,
-  x21 :: a,
-  x22 :: a }
-
-polyEdges :: RealFrac a => [Point a] -> [Line a]
-polyEdges =
-  sort . map orderEdge . filter nonHorizontal . makeEdges . close
-  where
-    close [] = error "empty poly"
-    close ps@(p : _) = ps ++ [p]
-    makeEdges [] = error "internal error: empty poly"
-    makeEdges [_] = []
-    makeEdges (p1 : p2 : ps) =
-      Line p1 p2 : makeEdges (p2 : ps)
-    nonHorizontal edge = 
-      y1L edge /= y2L edge
-    orderEdge edge
-      | p1L edge < p2L edge = edge
-      | otherwise = Line (p2L edge) (p1L edge)
-
-{-
--- XXX Even-odd fill rule only for now
-    [] -> []
-    [_] -> error "unpaired edge"
-    es@(e1 : _) ->
-      takeWhile ((y1L e1 ==) . y1L) es
--}
 
 -- Copyright 1988, 1998  The Open Group
 -- 
