@@ -8,6 +8,9 @@ import Data.Word
 import Graphics.XHB
 import System.IO
 
+import RenderLogo
+
+main :: IO ()
 main = do
   Just c <- connect
   _ <- handleErrors c
@@ -26,7 +29,7 @@ main = do
   sync c
   putStr "> "
   hFlush stdout
-  s <- getLine
+  _ <- getLine
   return ()
 
 getWhite :: Connection -> Word32
@@ -70,6 +73,7 @@ exposeHandler :: Connection -> WINDOW -> ExposeEvent -> IO ()
 exposeHandler c w e = do
   print e
   clearArea c (MkClearArea False w 0 0 0 0)
+  renderLogo c w (width_ExposeEvent e) (height_ExposeEvent e)
   sync c
 
 tryHandleEvent :: Connection

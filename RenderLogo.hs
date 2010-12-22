@@ -18,7 +18,7 @@
 --
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
-module RenderLogo
+module RenderLogo (renderLogo)
 where
 
 import Data.Bits
@@ -34,7 +34,7 @@ import RenderUtils
 toDrawable :: WINDOW -> DRAWABLE
 toDrawable = fromXid .toXid
 
-renderLogo :: Connection -> WINDOW -> Word32 -> Word32 -> IO ()
+renderLogo :: Connection -> WINDOW -> Word16 -> Word16 -> IO ()
 renderLogo c w width height = do
   -- do a centered even-sized square, at least for now
   let isize = (width `min` height) .&. complement 1
