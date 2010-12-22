@@ -1,3 +1,5 @@
 Demo.hs
 *.[co]
 *.hi
+*.svg
+test-trapcrack
