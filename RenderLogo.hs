@@ -18,7 +18,7 @@
 --
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
-module RenderLogo (renderLogo)
+module RenderLogo (toDrawable, renderLogoCore, renderLogoRender)
 where
 
 import Data.Bits
@@ -34,57 +34,78 @@ import RenderUtils
 toDrawable :: WINDOW -> DRAWABLE
 toDrawable = fromXid .toXid
 
-renderLogo :: Connection -> WINDOW -> Word16 -> Word16 -> IO ()
-renderLogo c w width height = do
+logoPoly :: Word16 -> Word16 -> [[Point Double]]
+logoPoly width height =
   -- do a centered even-sized square, at least for now
-  let isize = (width `min` height) .&. complement 1
+  let isize = (width `min` height) .&. complement 1 in
   let x = fromIntegral $ (width - isize) `div` 2
-  let y = fromIntegral $ (height - isize) `div` 2
-  let size = (fromIntegral isize)
+      y = fromIntegral $ (height - isize) `div` 2
+      size = (fromIntegral isize) in
   -- get some fundamental sizes
   let thin = size / 11.0
-  let thick = size / 4.0
-  let gap = thin / 4.0
-  let d31 = thin + thin + gap
+      thick = size / 4.0 in
+  let gap = thin / 4.0 in
+  let d31 = thin + thin + gap in
   -- set up the segments
   let thickLeft = 
         Line
          (Point x y)
          (Point (x + size - thick) (y + size)) :: Line Double
-  let thickRight = 
+      thickRight = 
         Line
          (Point (x + thick) y)
          (Point (x + size) (y + size))
-  let thinLeft = 
+      thinLeft = 
         Line
          (Point (x + size - d31) y)
          (Point x (y + size))
-  let thinRight = 
+      thinRight = 
         Line
          (Point (x + size) y)
          (Point (x + d31) (y + size))
-  let gapLeft = 
+      gapLeft = 
         Line
          (Point (x + size - (thin + gap)) y)
          (Point thin (y + size))
-  let gapRight = 
+      gapRight = 
         Line
          (Point (x + size - thin) y)
-         (Point (x + thin + gap) (y + size))
-  -- left polygon
-  renderPoly [ p1L thickLeft, 
-               p1L thickRight,
-               fromJust $ intersect thickRight gapLeft,
-               p2L gapLeft,
-               p2L thinLeft,
-               fromJust $ intersect thickLeft thinLeft ]
-  -- right polygon
-  renderPoly [ p1L thinRight,
-               p1L gapRight,
-               fromJust $ intersect thickLeft gapRight,
-               p2L thickLeft,
-               p2L thickRight,
-               fromJust $ intersect thickRight thinRight ]
+         (Point (x + thin + gap) (y + size)) in
+  let leftPoly = [ p1L thickLeft, 
+                   p1L thickRight,
+                   fromJust $ intersect thickRight gapLeft,
+                   p2L gapLeft,
+                   p2L thinLeft,
+                   fromJust $ intersect thickLeft thinLeft ]
+      rightPoly = [ p1L thinRight,
+                    p1L gapRight,
+                    fromJust $ intersect thickLeft gapRight,
+                    p2L thickLeft,
+                    p2L thickRight,
+                    fromJust $ intersect thickRight thinRight ] in
+  [closePoly leftPoly, closePoly rightPoly]
+
+renderLogoCore :: Connection -> WINDOW -> GCONTEXT ->
+                  Word16 -> Word16 -> IO ()
+renderLogoCore c w gc width height = do
+  mapM_ renderPoly $ logoPoly width height
+  where
+    renderPoly :: [Point Double] -> IO ()
+    renderPoly poly = do
+      let polyInfo = MkPolyLine {
+            coordinate_mode_PolyLine = CoordModeOrigin,
+            drawable_PolyLine = toDrawable w,
+            gc_PolyLine = gc,
+            points_PolyLine = map fixupPoint poly }
+            where
+              fixupPoint :: Point Double -> POINT
+              fixupPoint (Point x y) =
+                MkPOINT (round x) (round y)
+      polyLine c polyInfo
+
+renderLogoRender :: Connection -> WINDOW -> Word16 -> Word16 -> IO ()
+renderLogoRender c w width height = do
+  mapM_ renderPoly $ logoPoly width height
   where
     renderPoly :: [Point Double] -> IO ()
     renderPoly poly = do
@@ -128,6 +149,11 @@ renderLogo c w width height = do
               where
                 ff :: B24_8 -> FIXED
                 ff = fromFixed
+
+showPoly :: String -> [Point Double] -> IO ()
+showPoly name poly = do
+  putStr $ name ++ ": "
+  print $ map (\(Point x y) -> (x, y)) poly
 
 findPictureFormat :: Connection -> WINDOW -> IO PICTFORMAT
 findPictureFormat c w = do

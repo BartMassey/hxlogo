@@ -6,7 +6,7 @@
 module RenderUtils (Point(..), Line(..), Trap(..),
                     x1L, y1L, x2L, y2L,
                     invSlope, xIntercept, intersect,
-                    polyEdges, polyTraps)
+                    closePoly, polyEdges, polyTraps)
 where
   
 import Data.List (sort)  
@@ -49,14 +49,17 @@ data Real a => Trap a = Trap {
   x21T :: a,
   x22T :: a }
 
--- Trace around the polygon and close it off by connecting
--- the last point to the first.
+-- Close the polygon off by repeating the first point at the
+-- end.
+closePoly :: [Point a] -> [Point a]
+closePoly [] = error "empty poly"
+closePoly ps@(p : _) = ps ++ [p]
+
+-- Trace around the polygon, which is assumed to be closed.
 polyEdges :: Real a => [Point a] -> [Line a]
 polyEdges =
-  sort . map orderEdge . filter nonHorizontal . makeEdges . close
+  sort . map orderEdge . filter nonHorizontal . makeEdges
   where
-    close [] = error "empty poly"
-    close ps@(p : _) = ps ++ [p]
     makeEdges [] = error "internal error: empty poly"
     makeEdges [_] = []
     makeEdges (p1 : p2 : ps) =

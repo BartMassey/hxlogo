@@ -24,7 +24,13 @@ main = do
                   0 0 100 100 0
                   WindowClassInputOutput 0
                   vp)
-  _ <- handleEvents c w
+  gc <- newResource c
+  let gcInfo = MkCreateGC {
+        cid_CreateGC = gc,
+        drawable_CreateGC = toDrawable w,
+        value_CreateGC = emptyValueParam :: ValueParam Word32 }
+  createGC c gcInfo
+  _ <- handleEvents c w gc
   mapWindow c w
   sync c
   putStr "> "
@@ -56,24 +62,24 @@ showError e = show e
 -- http://community.haskell.org/~aslatter/code/xhb/Demo.hs  
 -- Now munged beyond recognition
 
-handleEvents :: Connection -> WINDOW -> IO ThreadId
-handleEvents c w = forkIO $ forever $ do
+handleEvents :: Connection -> WINDOW -> GCONTEXT -> IO ThreadId
+handleEvents c w gc = forkIO $ forever $ do
   e <- waitForEvent c
-  handleEvent c w e
+  handleEvent c w gc e
 
-handleEvent :: Connection -> WINDOW -> SomeEvent -> IO ()
-handleEvent c w ev = tryHandleEvent c w ev hs
+handleEvent :: Connection -> WINDOW -> GCONTEXT -> SomeEvent -> IO ()
+handleEvent c w gc ev = tryHandleEvent c w ev hs
   where 
-    hs = [EventHandler exposeHandler]
+    hs = [EventHandler (exposeHandler gc)]
 
 data EventHandler =  forall a . Event a 
                   => EventHandler (Connection -> WINDOW -> a -> IO ())
 
-exposeHandler :: Connection -> WINDOW -> ExposeEvent -> IO ()
-exposeHandler c w e = do
+exposeHandler :: GCONTEXT -> Connection -> WINDOW -> ExposeEvent -> IO ()
+exposeHandler gc c w e = do
   print e
   clearArea c (MkClearArea False w 0 0 0 0)
-  renderLogo c w (width_ExposeEvent e) (height_ExposeEvent e)
+  renderLogoCore c w gc 100 100
   sync c
 
 tryHandleEvent :: Connection
