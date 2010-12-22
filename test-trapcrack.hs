@@ -27,7 +27,7 @@ myPoly = map pointify $ [
 printT :: Trap Double -> String
 printT t = 
   printf ("<polygon points=\"%g,%g %g,%g %g,%g %g,%g\"\n" ++
-          " style=\"fill:#cccc;stroke:#000000;stroke-width:1\"/>\n")
+          " style=\"fill:#cccccc;stroke:#000000;stroke-width:3\"/>\n")
          (x11T t) (y1T t) (x12T t) (y1T t)
          (x22T t) (y2T t) (x21T t) (y2T t)
 
