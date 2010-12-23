@@ -47,5 +47,5 @@ postlude = "</svg>\n"
 main :: IO ()
 main = do
   putStr prelude
-  mapM_ (putStrLn . printT) $ polyTraps myPoly
+  mapM_ (putStrLn . printT) $ polyTraps $ closePoly myPoly
   putStr postlude
