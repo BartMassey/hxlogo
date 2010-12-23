@@ -8,11 +8,25 @@ import Data.Bits
 import Data.IORef
 import Data.Word
 import Graphics.XHB
+import Graphics.XHB.Connection.Extension
+import Graphics.XHB.Gen.Render as R
 import System.Exit
 import System.IO
 
 import RenderLogo
 import XString
+
+-- Trapezoids were introduced in Render 0.4.
+logoRenderUsable :: Connection -> IO Bool
+logoRenderUsable c = do
+  let ext = R.extension
+  present <- extensionPresent c ext
+  case present of
+    False -> return False
+    True -> do
+      versionReceipt <- R.queryVersion c 0 11
+      Right (MkQueryVersionReply major minor) <- getReply versionReceipt
+      return $ major == 0 && minor >= 4
 
 logoInternAtom :: Connection -> String -> IO ATOM
 logoInternAtom c s = do
@@ -25,16 +39,8 @@ logoInternAtom c s = do
   Right atom <- getReply atomReceipt
   return atom
 
-
-data EventContext = EventContext {
-    connection_EventContext :: Connection, 
-    window_EventContext :: WINDOW, 
-    gc_EventContext :: GCONTEXT,
-    wmProtocols_EventContext :: ATOM,
-    closeMessage_EventContext :: ATOM, 
-    width_EventContext :: IORef Word16,
-    height_EventContext :: IORef Word16 }
-
+-- XXX This is almost surely broken on big-endian machines.
+-- An xhb fix is needed to make this portable.
 atomsToPropertyList :: [ATOM] -> [Word8]
 atomsToPropertyList as =
   concatMap atomToProperty as
@@ -49,6 +55,16 @@ initialWidth = 100
 
 initialHeight :: Word16
 initialHeight = 100
+
+data EventContext = EventContext {
+    connection_EventContext :: Connection, 
+    window_EventContext :: WINDOW, 
+    gc_EventContext :: GCONTEXT,
+    wmProtocols_EventContext :: ATOM,
+    closeMessage_EventContext :: ATOM, 
+    width_EventContext :: IORef Word16,
+    height_EventContext :: IORef Word16,
+    renderUsable_EventContext :: Bool }
 
 main :: IO ()
 main = do
@@ -88,6 +104,7 @@ main = do
   gc <- logoGC c w pixels
   widthRef <- newIORef initialWidth
   heightRef <- newIORef initialHeight
+  renderable <- logoRenderUsable c
   handleEvents $ EventContext {
     connection_EventContext = c, 
     window_EventContext = w, 
@@ -95,7 +112,8 @@ main = do
     wmProtocols_EventContext = wm,
     closeMessage_EventContext = closeMessage,
     width_EventContext = widthRef,
-    height_EventContext = heightRef }
+    height_EventContext = heightRef,
+    renderUsable_EventContext = renderable }
 
 sync :: Connection -> IO ()
 sync c = do
@@ -139,13 +157,14 @@ tryHandleEvent ev (EventHandler fn : hs) = do
 exposeHandler :: EventContext -> ExposeEvent -> IO ()
 exposeHandler ctx e = do
   print e
+  let c = connection_EventContext ctx
+  let w = window_EventContext ctx
+  let gc = gc_EventContext ctx
   width <- readIORef $ width_EventContext ctx
   height <- readIORef $ height_EventContext ctx
-  renderLogoCore 
-    (connection_EventContext ctx) 
-    (window_EventContext ctx) 
-    (gc_EventContext ctx) 
-    width height
+  case renderUsable_EventContext ctx of
+    True -> renderLogoRender c w width height
+    False -> renderLogoCore c w gc width height
   sync (connection_EventContext ctx)
 
 -- http://linuxsoftware.co.nz/blog/2008/08/12/

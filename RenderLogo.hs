@@ -19,8 +19,8 @@
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
 module RenderLogo (toDrawable, defaultScreen,
-                   LogoPixels(..), logoPixels, logoGC, 
-                   renderLogoCore, renderLogoRender)
+                   LogoPixels(..), logoPixels, logoGC, renderLogoCore,
+                   renderLogoRender)
 where
 
 import Data.Bits
@@ -39,7 +39,7 @@ logoRed = (0xd200, 0x2200, 0x3200)
 logoGray :: (Word16, Word16, Word16)
 logoGray = (0xd700, 0xd700, 0xd700)
 
-toDrawable :: WINDOW -> DRAWABLE
+toDrawable :: XidLike a => a -> DRAWABLE
 toDrawable = fromXid .toXid
 
 defaultScreen :: Connection -> SCREEN 
@@ -153,63 +153,154 @@ renderLogoCore c w gc width height = do
                 MkPOINT (round x) (round y)
       fillPoly c polyInfo
 
-renderLogoRender :: Connection -> WINDOW -> Word16 -> Word16 -> IO ()
+logoCreatePicture :: Connection -> DRAWABLE -> PICTFORMAT -> IO PICTURE
+logoCreatePicture c drawable pictureFormat = do
+  pictureId <- newResource c
+  let pictureValue = emptyValueParam
+  let picture = MkCreatePicture {
+        pid_CreatePicture = pictureId,
+        drawable_CreatePicture = drawable,
+        format_CreatePicture = pictureFormat,
+        value_CreatePicture = pictureValue }
+  createPicture c picture
+  return pictureId
+
+logoCOLOR :: (Word16, Word16, Word16) -> COLOR
+logoCOLOR (r, g, b) =
+  MkCOLOR {
+    red_COLOR = r,
+    green_COLOR = g,
+    blue_COLOR = b,
+    alpha_COLOR = 0xffff }
+
+logoGrayPicture :: Connection -> WINDOW -> IO PICTURE
+logoGrayPicture c w = do
+  pixmap <- newResource c
+  createPixmap c $ MkCreatePixmap {
+    depth_CreatePixmap = 0,
+    pid_CreatePixmap = pixmap,
+    drawable_CreatePixmap = toDrawable w,
+    width_CreatePixmap = 1,
+    height_CreatePixmap = 1 }
+  pictureFormat <- findWindowPictureFormat c w
+  pictureId <- logoCreatePicture c (toDrawable pixmap) pictureFormat
+  let rect = MkRECTANGLE {
+        x_RECTANGLE = 0,
+        y_RECTANGLE = 0,
+        width_RECTANGLE = 1,
+        height_RECTANGLE = 1 }
+  fillRectangles c $ MkFillRectangles {
+        op_FillRectangles = PictOpAdd,
+        dst_FillRectangles = pictureId,
+        color_FillRectangles = logoCOLOR logoGray,
+        rects_FillRectangles = [rect] }
+  return pictureId
+                             
+renderLogoRender :: Connection -> WINDOW ->
+                    Word16 -> Word16 -> IO ()
 renderLogoRender c w width height = do
-  mapM_ (renderPoly . closePoly) $ logoPolys width height
+  grayPicture <- logoGrayPicture c w
+  pictureFormat <- findWindowPictureFormat c w
+  windowPicture <- logoCreatePicture c (toDrawable w) pictureFormat
+  let trapPolys = 
+        map convertTrap $ concatMap (polyTraps . closePoly)
+                        $ logoPolys width height
+  formatA8 <- findStandardPictureFormat c PictureFormatA8
+  let traps = MkTrapezoids {
+        op_Trapezoids = PictOpOver,
+        src_Trapezoids = grayPicture,
+        dst_Trapezoids = windowPicture,
+        mask_format_Trapezoids = formatA8,
+        src_x_Trapezoids = 0,
+        src_y_Trapezoids = 0,
+        traps_Trapezoids = trapPolys }
+  trapezoids c traps
   where
-    renderPoly :: [Point Double] -> IO ()
-    renderPoly poly = do
-      pictureFormat <- findPictureFormat c w
-      pictureId <- newResource c
-      let pictureValue = emptyValueParam
-      let picture = MkCreatePicture {
-            pid_CreatePicture = pictureId,
-            drawable_CreatePicture = toDrawable w,
-            format_CreatePicture = pictureFormat,
-            value_CreatePicture = pictureValue }
-      createPicture c picture
-      let traps = MkAddTraps {
-            picture_AddTraps = pictureId,
-            x_off_AddTraps = 0,
-            y_off_AddTraps = 0,
-            traps_AddTraps = map convertTrap $ polyTraps poly }
-      addTraps c traps
+    convertTrap :: Trap Double -> TRAPEZOID
+    convertTrap (Trap {
+                    y1T = y1,
+                    y2T = y2,
+                    x11T = x11,
+                    x12T = x12,
+                    x21T = x21,
+                    x22T = x22 }) =
+      MkTRAPEZOID {
+        top_TRAPEZOID = toFIXED y1,
+        bottom_TRAPEZOID = toFIXED y2,
+        left_TRAPEZOID = MkLINEFIX {
+          p1_LINEFIX = MkPOINTFIX {
+             x_POINTFIX = toFIXED x11,
+             y_POINTFIX = toFIXED y1 },
+          p2_LINEFIX = MkPOINTFIX {
+             x_POINTFIX = toFIXED x21,
+             y_POINTFIX = toFIXED y2 }},
+        right_TRAPEZOID = MkLINEFIX {
+          p1_LINEFIX = MkPOINTFIX {
+             x_POINTFIX = toFIXED x12,
+             y_POINTFIX = toFIXED y1 },
+          p2_LINEFIX = MkPOINTFIX {
+             x_POINTFIX = toFIXED x22,
+             y_POINTFIX = toFIXED y2 }}}
       where
-        convertTrap :: Trap Double -> TRAP
-        convertTrap (Trap {
-                        y1T = y1,
-                        y2T = y2,
-                        x11T = x11,
-                        x12T = x12,
-                        x21T = x21,
-                        x22T = x22 }) =
-          MkTRAP {
-            top_TRAP = MkSPANFIX {
-              l_SPANFIX = toFIXED x11,
-              r_SPANFIX = toFIXED x12,
-              y_SPANFIX = toFIXED y1 },
-            bot_TRAP = MkSPANFIX {
-              l_SPANFIX = toFIXED x21,
-              r_SPANFIX = toFIXED x22,
-              y_SPANFIX = toFIXED y2 }}
-          where
-            toFIXED :: Double -> FIXED
-            toFIXED = 
-              ff . fromRealFrac
-              where
-                ff :: B24_8 -> FIXED
-                ff = fromFixed
+        toFIXED :: Double -> FIXED
+        toFIXED d = 
+          fromFixed (fromRealFrac d :: B16_16)
 
 -- showPoly :: String -> [Point Double] -> IO ()
 -- showPoly name poly = do
 --   putStr $ name ++ ": "
 --   print $ map (\(Point x y) -> (x, y)) poly
 
-findPictureFormat :: Connection -> WINDOW -> IO PICTFORMAT
-findPictureFormat c w = do
+data StandardPictureFormat = 
+  PictureFormatARGB32 |
+  PictureFormatRGB24 |
+  PictureFormatA8 |
+  PictureFormatA4 |
+  PictureFormatA1
+
+-- Returns (depth, alpha-bits, rgb-bits)
+pictFormatInfo :: StandardPictureFormat -> (Word8, Word16, Word16)
+pictFormatInfo PictureFormatARGB32 = (32, 8, 8)
+pictFormatInfo PictureFormatRGB24 = (24, 0, 8)
+pictFormatInfo PictureFormatA8 = (8, 8, 0)
+pictFormatInfo PictureFormatA4 = (4, 4, 0)
+pictFormatInfo PictureFormatA1 = (1, 1, 0)
+
+-- XXX The component order isn't checked, so could return some
+-- freakish format.
+findStandardPictureFormat :: Connection -> 
+                             StandardPictureFormat -> IO PICTFORMAT
+findStandardPictureFormat c stdFmt = do
+  pfReceipt <- queryPictFormats c
+  Right pf <- getReply pfReceipt
+  let fmts = formats_QueryPictFormatsReply pf
+  let Just sf = find correctFmt fmts
+  return $ id_PICTFORMINFO sf
+  where
+    correctFmt :: PICTFORMINFO -> Bool
+    correctFmt fmt =
+      let (depth, a, rgb) = pictFormatInfo stdFmt in
+      depth_PICTFORMINFO fmt == depth &&
+      case type_PICTFORMINFO fmt of
+        PictTypeDirect ->
+          let d = direct_PICTFORMINFO fmt 
+              aMask = (1 `shiftL` fromIntegral a) - 1
+              rgbMask = (1 `shiftL` fromIntegral rgb) - 1 in
+          red_mask_DIRECTFORMAT d == rgbMask &&
+          green_mask_DIRECTFORMAT d == rgbMask &&
+          blue_mask_DIRECTFORMAT d == rgbMask &&
+          alpha_mask_DIRECTFORMAT d == aMask
+        _ -> False
+      
+findWindowPictureFormat :: Connection -> WINDOW -> IO PICTFORMAT
+findWindowPictureFormat c w = do
   waReceipt <- getWindowAttributes c w
   Right wa <- getReply waReceipt
   let visual = visual_GetWindowAttributesReply wa
+  findPictureFormat c visual
+  
+findPictureFormat :: Connection -> VISUALID -> IO PICTFORMAT
+findPictureFormat c visual = do
   pfReceipt <- queryPictFormats c
   Right pf <- getReply pfReceipt
   let pss = screens_QueryPictFormatsReply pf
