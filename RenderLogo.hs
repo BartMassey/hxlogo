@@ -88,7 +88,7 @@ logoPolys width height =
   let isize = (width `min` height) .&. complement 1 in
   let x = fromIntegral $ (width - isize) `div` 2
       y = fromIntegral $ (height - isize) `div` 2
-      size = (fromIntegral isize) in
+      size = fromIntegral isize in
   -- get some fundamental sizes
   let thin = size / 11.0
       thick = size / 4.0 in
@@ -114,7 +114,7 @@ logoPolys width height =
       gapLeft = 
         Line
          (Point (x + size - (thin + gap)) y)
-         (Point thin (y + size))
+         (Point (x + thin) (y + size))
       gapRight = 
         Line
          (Point (x + size - thin) y)
