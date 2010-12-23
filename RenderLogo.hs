@@ -175,9 +175,10 @@ logoCOLOR (r, g, b) =
 
 logoGrayPicture :: Connection -> WINDOW -> IO PICTURE
 logoGrayPicture c w = do
+  let depth = root_depth_SCREEN $ defaultScreen c
   pixmap <- newResource c
   createPixmap c $ MkCreatePixmap {
-    depth_CreatePixmap = 24, -- XXXX 24??
+    depth_CreatePixmap = depth,
     pid_CreatePixmap = pixmap,
     drawable_CreatePixmap = toDrawable w,
     width_CreatePixmap = 1,
