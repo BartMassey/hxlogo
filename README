@@ -1,0 +1,17 @@
+This lump of ill-formed stuff is hxlogo, an implementation of the
+ancient and venerable xlogo program via Antoine Latter's
+most excellent xhb X Haskell Bindings.
+
+There are many limitations here. A lightly-patched xhb is
+(currently) required to build this. I suspect it fails on
+big-endian clients, due to another missing xhb patch. No
+flags are supported; hxlogo infers whether you have the
+Render extension at an appropriate version, and proceeds on
+that basis alone. I doubt hxlogo will work without a window
+manager running.
+
+The point of this exercise, of course, was not really to
+replace xlogo, which is working just fine thank you very
+much. It was to evaluate xhb, and the difficulty of building
+atop it. 
+
