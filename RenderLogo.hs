@@ -20,7 +20,7 @@
 
 module RenderLogo (toDrawable, defaultScreen,
                    LogoPixels(..), logoPixels, logoGC, renderLogoCore,
-                   renderLogoRender)
+                   logoWindowPicture, logoGrayPicture, renderLogoRender)
 where
 
 import Data.Bits
@@ -197,12 +197,14 @@ logoGrayPicture c w = do
         rects_FillRectangles = [rect] }
   return pictureId
                              
-renderLogoRender :: Connection -> WINDOW ->
-                    Word16 -> Word16 -> IO ()
-renderLogoRender c w width height = do
-  grayPicture <- logoGrayPicture c w
+logoWindowPicture :: Connection -> WINDOW -> IO PICTURE
+logoWindowPicture c w = do
   pictureFormat <- findWindowPictureFormat c w
-  windowPicture <- logoCreatePicture c (toDrawable w) pictureFormat
+  logoCreatePicture c (toDrawable w) pictureFormat
+
+renderLogoRender :: Connection -> PICTURE -> PICTURE ->
+                    Word16 -> Word16 -> IO ()
+renderLogoRender c grayPicture windowPicture width height = do
   let trapPolys = 
         map convertTrap $ concatMap (polyTraps . closePoly)
                         $ logoPolys width height

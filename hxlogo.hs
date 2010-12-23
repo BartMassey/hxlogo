@@ -64,7 +64,7 @@ data EventContext = EventContext {
     closeMessage_EventContext :: ATOM, 
     width_EventContext :: IORef Word16,
     height_EventContext :: IORef Word16,
-    renderUsable_EventContext :: Bool }
+    renderInfo_EventContext :: Maybe (PICTURE, PICTURE) }
 
 main :: IO ()
 main = do
@@ -105,6 +105,13 @@ main = do
   widthRef <- newIORef initialWidth
   heightRef <- newIORef initialHeight
   renderable <- logoRenderUsable c
+  renderInfo <-
+    case renderable of
+      True -> do
+        grayPicture <- logoGrayPicture c w
+        windowPicture <- logoWindowPicture c w
+        return $ Just (grayPicture, windowPicture)
+      False -> return Nothing
   handleEvents $ EventContext {
     connection_EventContext = c, 
     window_EventContext = w, 
@@ -113,7 +120,7 @@ main = do
     closeMessage_EventContext = closeMessage,
     width_EventContext = widthRef,
     height_EventContext = heightRef,
-    renderUsable_EventContext = renderable }
+    renderInfo_EventContext = renderInfo }
 
 sync :: Connection -> IO ()
 sync c = do
@@ -162,9 +169,10 @@ exposeHandler ctx e = do
   let gc = gc_EventContext ctx
   width <- readIORef $ width_EventContext ctx
   height <- readIORef $ height_EventContext ctx
-  case renderUsable_EventContext ctx of
-    True -> renderLogoRender c w width height
-    False -> renderLogoCore c w gc width height
+  case renderInfo_EventContext ctx of
+    Nothing -> renderLogoCore c w gc width height
+    Just (grayPicture, windowPicture) -> 
+      renderLogoRender c grayPicture windowPicture width height
   sync (connection_EventContext ctx)
 
 -- http://linuxsoftware.co.nz/blog/2008/08/12/
