@@ -4,15 +4,41 @@
 -- a Haskell version of xlogo
 import Control.Concurrent
 import Control.Monad
+import Data.Bits
+import Data.Word
 import Graphics.XHB
+import System.Exit
+import System.IO
 
 import RenderLogo
+import XString
+
+logoInternAtom :: Connection -> String -> IO ATOM
+logoInternAtom c s = do
+  let name = xString s
+  atomReceipt <-
+    internAtom c $ MkInternAtom {
+      only_if_exists_InternAtom = True, 
+      name_len_InternAtom = length_XString name, 
+      name_InternAtom = chars_XString name }
+  Right atom <- getReply atomReceipt
+  return atom
+
 
 data EventContext = EventContext {
     connection_EventContext :: Connection, 
     window_EventContext :: WINDOW, 
-    gc_EventContext :: GCONTEXT }
+    gc_EventContext :: GCONTEXT, 
+    closeMessage_EventContext :: ATOM }
 
+atomsToPropertyList :: [ATOM] -> [Word8]
+atomsToPropertyList as =
+  concatMap atomToProperty as
+  where
+    atomToProperty :: ATOM -> [Word8]
+    atomToProperty a =
+      let aid = (fromXid $ toXid a) :: Word32 in
+      map (\i -> fromIntegral $ (aid `shiftR` (8 * i)) .&. 0xff) [3,2..0]
 
 main :: IO ()
 main = do
@@ -28,13 +54,25 @@ main = do
                   0 0 100 100 0
                   WindowClassInputOutput 0
                   vp)
+  closeMessage <- logoInternAtom c "WM_DELETE_WINDOW"
+  wm <- logoInternAtom c "WM_PROTOCOLS"
+  let props = [wm]
+  changeProperty c $ MkChangeProperty {
+    mode_ChangeProperty = PropModeReplace,
+    window_ChangeProperty = w,
+    property_ChangeProperty = wm,
+    type_ChangeProperty = fromXid $ toXid (4 :: Word32), -- XA_ATOM 
+    format_ChangeProperty = 32,
+    data_len_ChangeProperty = fromIntegral $ length props,
+    data_ChangeProperty = atomsToPropertyList props }
   mapWindow c w
   sync c
   gc <- logoGC c w pixels
   handleEvents $ EventContext {
     connection_EventContext = c, 
     window_EventContext = w, 
-    gc_EventContext = gc }
+    gc_EventContext = gc, 
+    closeMessage_EventContext = closeMessage }
 
 sync :: Connection -> IO ()
 sync c = do
@@ -64,7 +102,8 @@ handleEvent :: EventContext -> SomeEvent -> IO ()
 handleEvent ctx ev = 
   tryHandleEvent ev hs
   where 
-    hs = [EventHandler (exposeHandler ctx)]
+    hs = [EventHandler $ exposeHandler ctx,
+          EventHandler $ closeHandler ctx]
 
 tryHandleEvent :: SomeEvent -> [EventHandler] -> IO ()
 tryHandleEvent _ [] = return ()
@@ -83,7 +122,10 @@ exposeHandler ctx e = do
     100 100
   sync (connection_EventContext ctx)
 
--- closeHandler :: EventContext -> ClientMessageEvent -> IO ()
--- closeHandler ctx e = do
---   let ClientData32 (message : _) = data_ClientMessageEvent e
-  
+closeHandler :: EventContext -> ClientMessageEvent -> IO ()
+closeHandler ctx e = do
+   let messageType = type_ClientMessageEvent e
+   if messageType == closeMessage_EventContext ctx
+     then do hPutStrLn stderr "Exiting"
+             exitWith ExitSuccess
+     else return ()
