@@ -28,7 +28,8 @@ logoInternAtom c s = do
 data EventContext = EventContext {
     connection_EventContext :: Connection, 
     window_EventContext :: WINDOW, 
-    gc_EventContext :: GCONTEXT, 
+    gc_EventContext :: GCONTEXT,
+    wmProtocols_EventContext :: ATOM,
     closeMessage_EventContext :: ATOM }
 
 atomsToPropertyList :: [ATOM] -> [Word8]
@@ -38,7 +39,7 @@ atomsToPropertyList as =
     atomToProperty :: ATOM -> [Word8]
     atomToProperty a =
       let aid = (fromXid $ toXid a) :: Word32 in
-      map (\i -> fromIntegral $ (aid `shiftR` (8 * i)) .&. 0xff) [3,2..0]
+      map (\i -> fromIntegral $ (aid `shiftR` (8 * i)) .&. 0xff) [0..3]
 
 main :: IO ()
 main = do
@@ -47,7 +48,8 @@ main = do
   pixels <- logoPixels c
   w <- newResource c
   let rw = getRoot c
-  let vp = toValueParam [(CWEventMask, toMask [EventMaskExposure]),
+  let eventMask = [EventMaskExposure]
+  let vp = toValueParam [(CWEventMask, toMask eventMask),
                          (CWBackPixel, bgPixel pixels)]
   createWindow c (MkCreateWindow
                   0 w rw
@@ -56,7 +58,7 @@ main = do
                   vp)
   closeMessage <- logoInternAtom c "WM_DELETE_WINDOW"
   wm <- logoInternAtom c "WM_PROTOCOLS"
-  let props = [wm]
+  let props = [closeMessage]
   changeProperty c $ MkChangeProperty {
     mode_ChangeProperty = PropModeReplace,
     window_ChangeProperty = w,
@@ -71,7 +73,8 @@ main = do
   handleEvents $ EventContext {
     connection_EventContext = c, 
     window_EventContext = w, 
-    gc_EventContext = gc, 
+    gc_EventContext = gc,
+    wmProtocols_EventContext = wm,
     closeMessage_EventContext = closeMessage }
 
 sync :: Connection -> IO ()
@@ -124,8 +127,14 @@ exposeHandler ctx e = do
 
 closeHandler :: EventContext -> ClientMessageEvent -> IO ()
 closeHandler ctx e = do
+   hPutStr stderr "Client Message: "
    let messageType = type_ClientMessageEvent e
-   if messageType == closeMessage_EventContext ctx
-     then do hPutStrLn stderr "Exiting"
-             exitWith ExitSuccess
-     else return ()
+   if messageType == wmProtocols_EventContext ctx
+     then do hPutStr stderr "checking detail..."
+             let cm = closeMessage_EventContext ctx
+             let ClientData32 clientData = data_ClientMessageEvent e
+             if fromXid (toXid cm) == head clientData
+               then do hPutStrLn stderr "and exiting"
+                       exitWith ExitSuccess
+               else hPutStrLn stderr "wrong message, ignored"
+     else hPutStrLn stderr "wrong type, ignored"
