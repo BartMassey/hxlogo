@@ -70,22 +70,24 @@ polyEdges =
       | p1L edge < p2L edge = edge
       | otherwise = Line (p2L edge) (p1L edge)
 
--- Given the edge list of a simple polygon, walk the
--- edges off in increasing starting y / increasing starting x
--- order. Because the polygon is simple, you'll get pairs of
--- non-horizontal edges that start at a given y with least x:
--- these define the top of your trapezoid. Take the first pair,
--- clip off the rest of the trapezoid at the smaller ending y,
--- and place the unused portion of the lower edge back on the
--- edge list in its proper position. Repeat until no more edges
--- are available.
+-- Given all the non-horizontal edges of a
+-- non-self-intersecting polygon, walk the edges off in
+-- increasing starting y / increasing starting x
+-- order. Because the polygon is non-self-intersecting,
+-- you'll get pairs of non-horizontal edges that start at a
+-- given y with least x: these define the top of your
+-- trapezoid. Take the first pair, clip off the rest of the
+-- trapezoid at the smaller ending y, and place the unused
+-- portion of the lower edge back on the edge list in its
+-- proper position. Repeat until no more edges are
+-- available.
 -- 
--- This traversal corresponds to the "odd-even fill rule". It
--- would only be a little more work to do "nonzero-winding", but
--- I don't need it and don't want to think about it right now.
--- Besides, I'd need to think about non-simple polygons and this
--- code anyhow: it would need at minimum to deal with "crossed"
--- traps.
+-- This traversal corresponds to the "odd-even fill
+-- rule". It would only be a little more work to do
+-- "nonzero-winding", but I don't need it and don't want to
+-- think about it right now.  Besides, I'd need to think
+-- about self-intersecting polygons and this code anyhow: it
+-- would need at minimum to deal with "crossed" traps.
 polyEdgeTraps :: RealFrac a => [Line a] -> [Trap a]
 polyEdgeTraps [] = []
 polyEdgeTraps [_] = error "unpaired edge"
