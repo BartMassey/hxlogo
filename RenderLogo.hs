@@ -156,7 +156,7 @@ renderLogoCore c w gc width height = do
 logoCreatePicture :: Connection -> DRAWABLE -> PICTFORMAT -> IO PICTURE
 logoCreatePicture c drawable pictureFormat = do
   pictureId <- newResource c
-  let pictureValue = emptyValueParam
+  let pictureValue = toValueParam [(CPRepeat, toValue RepeatNormal)]
   let picture = MkCreatePicture {
         pid_CreatePicture = pictureId,
         drawable_CreatePicture = drawable,
@@ -177,7 +177,7 @@ logoGrayPicture :: Connection -> WINDOW -> IO PICTURE
 logoGrayPicture c w = do
   pixmap <- newResource c
   createPixmap c $ MkCreatePixmap {
-    depth_CreatePixmap = 0,
+    depth_CreatePixmap = 24, -- XXXX 24??
     pid_CreatePixmap = pixmap,
     drawable_CreatePixmap = toDrawable w,
     width_CreatePixmap = 1,
