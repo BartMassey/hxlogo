@@ -51,11 +51,18 @@ main = do
   let eventMask = [EventMaskExposure]
   let vp = toValueParam [(CWEventMask, toMask eventMask),
                          (CWBackPixel, bgPixel pixels)]
-  createWindow c (MkCreateWindow
-                  0 w rw
-                  0 0 100 100 0
-                  WindowClassInputOutput 0
-                  vp)
+  createWindow c $ MkCreateWindow {
+                  depth_CreateWindow = 0, 
+                  wid_CreateWindow = w, 
+                  parent_CreateWindow = rw,
+                  x_CreateWindow = 0,
+                  y_CreateWindow = 0,
+                  width_CreateWindow = 100, 
+                  height_CreateWindow = 100, 
+                  border_width_CreateWindow = 0,
+                  class_CreateWindow = WindowClassInputOutput,
+                  visual_CreateWindow = 0,
+                  value_CreateWindow = vp }
   closeMessage <- logoInternAtom c "WM_DELETE_WINDOW"
   wm <- logoInternAtom c "WM_PROTOCOLS"
   let props = [closeMessage]
@@ -125,6 +132,8 @@ exposeHandler ctx e = do
     100 100
   sync (connection_EventContext ctx)
 
+-- http://linuxsoftware.co.nz/blog/2008/08/12/
+--   handling-window-close-in-an-x11-app
 closeHandler :: EventContext -> ClientMessageEvent -> IO ()
 closeHandler ctx e = do
    hPutStr stderr "Client Message: "
