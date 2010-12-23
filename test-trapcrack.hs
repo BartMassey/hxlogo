@@ -3,7 +3,7 @@
 
 import Text.Printf
 
-import RenderUtils
+import PolyUtils
 
 pointify :: Real a => (a, a) -> Point a
 pointify = uncurry Point

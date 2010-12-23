@@ -3,7 +3,7 @@
 -- See the end of this file for license information
 -- and original copyright notice.
 
-module RenderUtils (Point(..), Line(..), Trap(..),
+module PolyUtils (Point(..), Line(..), Trap(..),
                     x1L, y1L, x2L, y2L,
                     invSlope, xIntercept, intersect,
                     closePoly, polyEdges, polyTraps)

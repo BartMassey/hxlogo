@@ -31,7 +31,7 @@ import Graphics.XHB
 import Graphics.XHB.Gen.Render
 
 import FixedBinary
-import RenderUtils
+import PolyUtils
 
 logoRed :: (Word16, Word16, Word16)
 logoRed = (0xd200, 0x2200, 0x3200)
