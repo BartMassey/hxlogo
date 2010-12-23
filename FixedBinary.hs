@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, UndecidableInstances, EmptyDataDecls #-}
 -- Copyright © 2010 Bart Massey
 -- Binary fixed point representations
-module FixedBinary (HasFixedBits(..), fromFixed, fromRealFrac, B16_16, B24_8)
+module FixedBinary (HasFixedBits(..), fromFixed, fromRealFrac, 
+                    B16_16, B24_8)
 where
   
 import Data.Fixed
@@ -18,10 +19,10 @@ instance HasFixedBits b => HasResolution b where
 -- Convert a RealFrac to a Fixed in the obvious way.
 fromRealFrac :: (RealFrac a, HasResolution b) => a -> Fixed b
 fromRealFrac a = 
-  typeify a undefined
+  typeify undefined
   where
-    typeify :: (RealFrac a, HasResolution b) => a -> Fixed b -> Fixed b
-    typeify a b = 
+    typeify :: HasResolution b => Fixed b -> Fixed b
+    typeify b = 
       fromRational (truncate (a * fromIntegral r) % r)
       where
         r = resolution b
@@ -31,14 +32,14 @@ fromRealFrac a =
 fromFixed :: (HasResolution a, Integral b) => Fixed a -> b
 fromFixed a = truncate (a * fromIntegral (resolution a))
 
-data Binary16_16 = Binary16_16
+data Binary16_16
 type B16_16 = Fixed Binary16_16
 
 instance HasFixedBits Binary16_16 where
   intBits _ = 16
   fracBits _ = 16
 
-data Binary24_8 = Binary24_8
+data Binary24_8
 type B24_8 = Fixed Binary24_8
 
 instance HasFixedBits Binary24_8 where
