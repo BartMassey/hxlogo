@@ -52,17 +52,17 @@ main = do
   let vp = toValueParam [(CWEventMask, toMask eventMask),
                          (CWBackPixel, bgPixel pixels)]
   createWindow c $ MkCreateWindow {
-                  depth_CreateWindow = 0, 
-                  wid_CreateWindow = w, 
-                  parent_CreateWindow = rw,
-                  x_CreateWindow = 0,
-                  y_CreateWindow = 0,
-                  width_CreateWindow = 100, 
-                  height_CreateWindow = 100, 
-                  border_width_CreateWindow = 0,
-                  class_CreateWindow = WindowClassInputOutput,
-                  visual_CreateWindow = 0,
-                  value_CreateWindow = vp }
+    depth_CreateWindow = 0, 
+    wid_CreateWindow = w, 
+    parent_CreateWindow = rw,
+    x_CreateWindow = 0,
+    y_CreateWindow = 0,
+    width_CreateWindow = 100, 
+    height_CreateWindow = 100, 
+    border_width_CreateWindow = 0,
+    class_CreateWindow = WindowClassInputOutput,
+    visual_CreateWindow = 0,
+    value_CreateWindow = vp }
   closeMessage <- logoInternAtom c "WM_DELETE_WINDOW"
   wm <- logoInternAtom c "WM_PROTOCOLS"
   let props = [closeMessage]
