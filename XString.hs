@@ -1,6 +1,6 @@
 -- Copyright © 2010 Bart Massey
 
-module XString
+module XString (XString(..), xString)
 where
 
 import Foreign.C.Types
