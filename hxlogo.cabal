@@ -30,10 +30,18 @@ Executable hxlogo
   main-is: hxlogo.hs
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
 
+Flag BuildAll
+  Description: Build test programs and everything.
+  Default: False
+
 Executable test-polyutils
   main-is: test-polyutils.hs
   other-modules: Graphics.PolyUtils
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
+  if flag(BuildAll)
+    buildable: True
+  else
+    buildable: False
 
 Library
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
