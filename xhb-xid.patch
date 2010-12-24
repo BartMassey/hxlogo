@@ -1,0 +1,16 @@
+Wed Dec 22 17:57:14 PST 2010  Bart Massey <bart@cs.pdx.edu>
+  * added XidLike instance for Word32 cause sometimes its needed
+diff -rN -u old-xhb-darcs/Graphics/XHB/Shared.hs new-xhb-darcs/Graphics/XHB/Shared.hs
+--- old-xhb-darcs/Graphics/XHB/Shared.hs	2010-12-23 22:30:09.000000000 -0800
++++ new-xhb-darcs/Graphics/XHB/Shared.hs	2010-12-23 22:30:09.000000000 -0800
+@@ -56,6 +56,10 @@
+     fromXid = id
+     toXid   = id
+ 
++instance XidLike Word32 where
++    fromXid (MkXid w) = w
++    toXid = MkXid
++
+ xidNone :: Xid
+ xidNone = MkXid 0
+ 
