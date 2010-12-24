@@ -18,8 +18,7 @@
 --
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11
 
-module RenderLogo (toDrawable, defaultScreen,
-                   LogoPixels(..), logoPixels, logoGC, renderLogoCore,
+module RenderLogo (LogoPixels(..), logoPixels, logoGC, renderLogoCore,
                    logoWindowPicture, logoGrayPicture, renderLogoRender)
 where
 
@@ -30,6 +29,7 @@ import Data.Word
 import Graphics.XHB
 import Graphics.XHB.Gen.Render
 
+import Graphics.XHB.Utils
 import FixedBinary
 import PolyUtils
 
@@ -38,12 +38,6 @@ logoRed = (0xd200, 0x2200, 0x3200)
 
 logoGray :: (Word16, Word16, Word16)
 logoGray = (0xd700, 0xd700, 0xd700)
-
-toDrawable :: XidLike a => a -> DRAWABLE
-toDrawable = fromXid .toXid
-
-defaultScreen :: Connection -> SCREEN 
-defaultScreen = head . roots_Setup . connectionSetup
 
 colorInfo :: COLORMAP -> (Word16, Word16, Word16) -> AllocColor
 colorInfo cm (r, g, b) = MkAllocColor {

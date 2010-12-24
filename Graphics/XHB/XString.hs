@@ -1,6 +1,6 @@
 -- Copyright © 2010 Bart Massey
 
-module XString (XString(..), xString)
+module Graphics.XHB.XString (XString(..), xString)
 where
 
 import Foreign.C.Types

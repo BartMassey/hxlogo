@@ -13,8 +13,8 @@ import Graphics.XHB.Gen.Render as R
 import System.Exit
 import System.IO
 
+import Graphics.XHB.Utils
 import RenderLogo
-import XString
 
 -- Trapezoids were introduced in Render 0.4.
 logoRenderUsable :: Connection -> IO Bool
@@ -28,16 +28,7 @@ logoRenderUsable c = do
       Right (MkQueryVersionReply major minor) <- getReply versionReceipt
       return $ major == 0 && minor >= 4
 
-logoInternAtom :: Connection -> String -> IO ATOM
-logoInternAtom c s = do
-  let name = xString s
-  atomReceipt <-
-    internAtom c $ MkInternAtom {
-      only_if_exists_InternAtom = True, 
-      name_len_InternAtom = length_XString name, 
-      name_InternAtom = chars_XString name }
-  Right atom <- getReply atomReceipt
-  return atom
+
 
 -- XXX This is almost surely broken on big-endian machines.
 -- An xhb fix is needed to make this portable.
@@ -88,8 +79,8 @@ main = do
     class_CreateWindow = WindowClassInputOutput,
     visual_CreateWindow = 0,
     value_CreateWindow = vp }
-  closeMessage <- logoInternAtom c "WM_DELETE_WINDOW"
-  wm <- logoInternAtom c "WM_PROTOCOLS"
+  closeMessage <- internifyAtom c True "WM_DELETE_WINDOW"
+  wm <- internifyAtom c True "WM_PROTOCOLS"
   let props = [closeMessage]
   changeProperty c $ MkChangeProperty {
     mode_ChangeProperty = PropModeReplace,
@@ -121,11 +112,6 @@ main = do
     width_EventContext = widthRef,
     height_EventContext = heightRef,
     renderInfo_EventContext = renderInfo }
-
-sync :: Connection -> IO ()
-sync c = do
-  _ <- getInputFocus c
-  return ()
 
 handleErrors :: Connection -> IO ThreadId
 handleErrors c = forkIO $ forever $ do
