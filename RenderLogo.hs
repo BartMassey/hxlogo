@@ -40,10 +40,10 @@ import Data.FixedBinary
 import Graphics.PolyUtils
 
 logoRed :: (Word16, Word16, Word16)
-logoRed = (0xd200, 0x2200, 0x3200)
+logoRed = (0xd2d2, 0x2222, 0x3232)
 
 logoGray :: (Word16, Word16, Word16)
-logoGray = (0xd700, 0xd700, 0xd700)
+logoGray = (0xd7d7, 0xd7d7, 0xd7d7)
 
 colorInfo :: COLORMAP -> (Word16, Word16, Word16) -> AllocColor
 colorInfo cm (r, g, b) = MkAllocColor {
@@ -135,9 +135,11 @@ logoPolys width height =
 
 renderLogoCore :: Connection -> WINDOW -> GCONTEXT ->
                   Word16 -> Word16 -> IO ()
-renderLogoCore c w gc width height = do
-  clearArea c (MkClearArea False w 0 0 width height)
-  mapM_ renderPoly $ logoPolys width height
+renderLogoCore c w gc width height
+  | width > 10 && height > 10 = do
+    clearArea c (MkClearArea False w 0 0 width height)
+    mapM_ renderPoly $ logoPolys width height
+  | otherwise = return ()
   where
     renderPoly :: [Point Double] -> IO ()
     renderPoly poly = do
@@ -204,8 +206,7 @@ logoWindowPicture c w = do
 
 renderLogoRender :: Connection -> PICTURE -> PICTURE ->
                     Word16 -> Word16 -> IO ()
-renderLogoRender c grayPicture windowPicture width height
-  | width > 10 && height > 10 = do
+renderLogoRender c grayPicture windowPicture width height = do
     let trapPolys = 
           map convertTrap $ concatMap (polyTraps . closePoly)
                           $ logoPolys width height
@@ -219,7 +220,6 @@ renderLogoRender c grayPicture windowPicture width height
           src_y_Trapezoids = 0,
           traps_Trapezoids = trapPolys }
     trapezoids c traps
-  | otherwise = return ()
     where
       convertTrap :: Trap Double -> TRAPEZOID
       convertTrap (Trap {
