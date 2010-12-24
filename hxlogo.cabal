@@ -2,7 +2,7 @@
 -- This program is licensed under the "3-clause ('new') BSD License".
 -- See the file COPYING in this distribution for license information.
 name: hxlogo
-version: 0.1.3
+version: 0.1.4
 cabal-version: >= 1.2
 build-type: Simple
 license: BSD3
@@ -12,9 +12,9 @@ author: Bart Massey
 maintainer: bart@cs.pdx.edu
 stability: alpha
 homepage: http://wiki.cs.pdx.edu/bartforge/hxlogo
-package-url: http://wiki.cs.pdx.edu/cabal-packages/hxlogo-0.1.tar.gz
+package-url: http://wiki.cs.pdx.edu/cabal-packages/hxlogo-0.1.4.tar.gz
 data-files: README
-synopsis: Command-line spelling word suggestion tool
+synopsis: Haskell / XHB xlogo program plus misc XHB-related libraries.
 description: 
 
     "hxlogo" is a Haskell re-implementation / transcription
