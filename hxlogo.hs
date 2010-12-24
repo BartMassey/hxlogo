@@ -33,8 +33,6 @@ logoRenderUsable c = do
       Right (MkQueryVersionReply major minor) <- getReply versionReceipt
       return $ major == 0 && minor >= 4
 
-
-
 -- XXX This is almost surely broken on big-endian machines.
 -- An xhb fix is needed to make this portable.
 atomsToPropertyList :: [ATOM] -> [Word8]
@@ -154,7 +152,7 @@ tryHandleEvent ctx ev (EventHandler fn : hs) = do
     _ -> tryHandleEvent ctx ev hs
 
 exposeHandler :: EventContext -> ExposeEvent -> IO ()
-exposeHandler ctx e = do
+exposeHandler ctx _ = do
   let c = connection_EventContext ctx
   let w = window_EventContext ctx
   let gc = gc_EventContext ctx
