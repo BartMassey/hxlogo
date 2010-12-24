@@ -204,50 +204,52 @@ logoWindowPicture c w = do
 
 renderLogoRender :: Connection -> PICTURE -> PICTURE ->
                     Word16 -> Word16 -> IO ()
-renderLogoRender c grayPicture windowPicture width height = do
-  let trapPolys = 
-        map convertTrap $ concatMap (polyTraps . closePoly)
-                        $ logoPolys width height
-  formatA8 <- findStandardPictureFormat c PictureFormatA8
-  let traps = MkTrapezoids {
-        op_Trapezoids = PictOpOver,
-        src_Trapezoids = grayPicture,
-        dst_Trapezoids = windowPicture,
-        mask_format_Trapezoids = formatA8,
-        src_x_Trapezoids = 0,
-        src_y_Trapezoids = 0,
-        traps_Trapezoids = trapPolys }
-  trapezoids c traps
-  where
-    convertTrap :: Trap Double -> TRAPEZOID
-    convertTrap (Trap {
-                    y1T = y1,
-                    y2T = y2,
-                    x11T = x11,
-                    x12T = x12,
-                    x21T = x21,
-                    x22T = x22 }) =
-      MkTRAPEZOID {
-        top_TRAPEZOID = toFIXED y1,
-        bottom_TRAPEZOID = toFIXED y2,
-        left_TRAPEZOID = MkLINEFIX {
-          p1_LINEFIX = MkPOINTFIX {
-             x_POINTFIX = toFIXED x11,
-             y_POINTFIX = toFIXED y1 },
-          p2_LINEFIX = MkPOINTFIX {
-             x_POINTFIX = toFIXED x21,
-             y_POINTFIX = toFIXED y2 }},
-        right_TRAPEZOID = MkLINEFIX {
-          p1_LINEFIX = MkPOINTFIX {
-             x_POINTFIX = toFIXED x12,
-             y_POINTFIX = toFIXED y1 },
-          p2_LINEFIX = MkPOINTFIX {
-             x_POINTFIX = toFIXED x22,
-             y_POINTFIX = toFIXED y2 }}}
-      where
-        toFIXED :: Double -> FIXED
-        toFIXED d = 
-          fromFixed (fromRealFrac d :: B16_16)
+renderLogoRender c grayPicture windowPicture width height
+  | width > 10 && height > 10 = do
+    let trapPolys = 
+          map convertTrap $ concatMap (polyTraps . closePoly)
+                          $ logoPolys width height
+    formatA8 <- findStandardPictureFormat c PictureFormatA8
+    let traps = MkTrapezoids {
+          op_Trapezoids = PictOpOver,
+          src_Trapezoids = grayPicture,
+          dst_Trapezoids = windowPicture,
+          mask_format_Trapezoids = formatA8,
+          src_x_Trapezoids = 0,
+          src_y_Trapezoids = 0,
+          traps_Trapezoids = trapPolys }
+    trapezoids c traps
+  | otherwise = return ()
+    where
+      convertTrap :: Trap Double -> TRAPEZOID
+      convertTrap (Trap {
+                      y1T = y1,
+                      y2T = y2,
+                      x11T = x11,
+                      x12T = x12,
+                      x21T = x21,
+                      x22T = x22 }) =
+        MkTRAPEZOID {
+          top_TRAPEZOID = toFIXED y1,
+          bottom_TRAPEZOID = toFIXED y2,
+          left_TRAPEZOID = MkLINEFIX {
+            p1_LINEFIX = MkPOINTFIX {
+               x_POINTFIX = toFIXED x11,
+               y_POINTFIX = toFIXED y1 },
+            p2_LINEFIX = MkPOINTFIX {
+               x_POINTFIX = toFIXED x21,
+               y_POINTFIX = toFIXED y2 }},
+          right_TRAPEZOID = MkLINEFIX {
+            p1_LINEFIX = MkPOINTFIX {
+               x_POINTFIX = toFIXED x12,
+               y_POINTFIX = toFIXED y1 },
+            p2_LINEFIX = MkPOINTFIX {
+               x_POINTFIX = toFIXED x22,
+               y_POINTFIX = toFIXED y2 }}}
+        where
+          toFIXED :: Double -> FIXED
+          toFIXED d = 
+            fromFixed (fromRealFrac d :: B16_16)
 
 -- showPoly :: String -> [Point Double] -> IO ()
 -- showPoly name poly = do
