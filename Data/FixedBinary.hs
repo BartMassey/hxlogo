@@ -12,8 +12,9 @@
 -- is that the types 'B16_16' and 'B24_24' provided by this
 -- module correspond to 'Fixed' types with the appropriate
 -- resolution.
-module FixedBinary (HasFixedBits(..), fromFixed, fromRealFrac, 
-                    B16_16, B24_8)
+module Data.FixedBinary (HasFixedBits(..), 
+                         fromFixed, fromRealFrac, 
+                         B16_16, B24_8)
 where
   
 import Data.Fixed

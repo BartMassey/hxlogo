@@ -19,10 +19,10 @@
 -- in mind, there is deliberately nothing X-specific in here.
 -- The basic coordinate type is left as loose as reasonably
 -- possible to accommodate clients of all sorts.
-module PolyUtils (Point(..), Line(..), Trap(..),
-                  x1L, y1L, x2L, y2L,
-                  closePoly, polyEdges, polyTraps,
-                  invSlope, intersect)
+module Graphics.PolyUtils (Point(..), Line(..), Trap(..),
+                           x1L, y1L, x2L, y2L,
+                           closePoly, polyEdges, polyTraps,
+                           invSlope, intersect)
 where
   
 import Data.List (sort)  

@@ -32,4 +32,18 @@ Executable hxlogo
 
 Executable test-polyutils
   main-is: test-polyutils.hs
+  other-modules: Graphics.PolyUtils
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
+
+Library
+  build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
+  extensions:
+    ExistentialQuantification,
+    FlexibleInstances,
+    UndecidableInstances,
+    EmptyDataDecls
+  exposed-modules:
+    Data.FixedBinary,
+    Graphics.PolyUtils,
+    Graphics.XHB.Utils,
+    Graphics.XHB.XString
