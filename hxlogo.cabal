@@ -37,11 +37,6 @@ Executable test-polyutils
 
 Library
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
-  extensions:
-    ExistentialQuantification,
-    FlexibleInstances,
-    UndecidableInstances,
-    EmptyDataDecls
   exposed-modules:
     Data.FixedBinary,
     Graphics.PolyUtils,
