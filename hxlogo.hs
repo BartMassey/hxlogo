@@ -121,7 +121,7 @@ main = do
 handleErrors :: Connection -> IO ThreadId
 handleErrors c = forkIO $ forever $ do
   e <- waitForError c
-  putStrLn $ showError e
+  hPutStrLn stderr $ showError e
 
 showError :: SomeError -> String
 showError e = show e
@@ -154,7 +154,6 @@ tryHandleEvent ev (EventHandler fn : hs) = do
 
 exposeHandler :: EventContext -> ExposeEvent -> IO ()
 exposeHandler ctx e = do
-  print e
   let c = connection_EventContext ctx
   let w = window_EventContext ctx
   let gc = gc_EventContext ctx
@@ -170,21 +169,17 @@ exposeHandler ctx e = do
 --   handling-window-close-in-an-x11-app
 closeHandler :: EventContext -> ClientMessageEvent -> IO ()
 closeHandler ctx e = do
-  hPutStr stderr "Client Message: "
   let messageType = type_ClientMessageEvent e
   if messageType == wmProtocols_EventContext ctx
-    then do hPutStr stderr "checking detail..."
-            let cm = closeMessage_EventContext ctx
+    then do let cm = closeMessage_EventContext ctx
             let ClientData32 clientData = data_ClientMessageEvent e
             if fromXid (toXid cm) == head clientData
-              then do hPutStrLn stderr "and exiting"
-                      exitWith ExitSuccess
-              else hPutStrLn stderr "wrong message, ignored"
-    else hPutStrLn stderr "wrong type, ignored"
+              then exitWith ExitSuccess
+              else return ()
+    else return ()
 
 resizeHandler :: EventContext -> ConfigureNotifyEvent -> IO ()
 resizeHandler ctx e = do
-  hPutStr stderr "Configure Notify: "
   let widthRef = width_EventContext ctx
   let heightRef = height_EventContext ctx
   curWidth <- readIORef widthRef
@@ -192,8 +187,6 @@ resizeHandler ctx e = do
   let newWidth = width_ConfigureNotifyEvent e
   let newHeight = height_ConfigureNotifyEvent e
   if newWidth /= curWidth || newHeight /= curHeight
-    then do hPutStrLn stderr "updating geometry"
-            writeIORef widthRef newWidth
+    then do writeIORef widthRef newWidth
             writeIORef heightRef newHeight
-    else hPutStrLn stderr "no geometry change"
-    
+    else return ()
