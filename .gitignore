@@ -4,3 +4,4 @@ Demo.hs
 *.svg
 test-polyutils
 hxlogo
+/dist/
