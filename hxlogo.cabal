@@ -28,8 +28,8 @@ tested-with: GHC == 6.12.1
 
 Executable hxlogo
   main-is: hxlogo.hs
-  build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1.0
+  build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
 
 Executable test-polyutils
   main-is: test-polyutils.hs
-  build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1.0
+  build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
