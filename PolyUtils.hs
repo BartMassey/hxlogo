@@ -9,17 +9,34 @@
 -- distribution for the believed-compatible license for the
 -- remainder of this file.
 
+-- | This module contains some basic 2D geometric primitives,
+-- and some primitive computations on these primitives. In
+-- particular, it has some quite limited functionality for
+-- "cracking" a polygon into a list of trapezoids. A polygon
+-- is simply represented as a vertex-list, with no special type.
+-- 
+-- While the module was written with the X Render Extension
+-- in mind, there is deliberately nothing X-specific in here.
+-- The basic coordinate type is left as loose as reasonably
+-- possible to accommodate clients of all sorts.
 module PolyUtils (Point(..), Line(..), Trap(..),
-                    x1L, y1L, x2L, y2L,
-                    invSlope, xIntercept, intersect,
-                    closePoly, polyEdges, polyTraps)
+                  x1L, y1L, x2L, y2L,
+                  closePoly, polyEdges, polyTraps,
+                  invSlope, intersect)
 where
   
 import Data.List (sort)  
 
+-- | This module's objects are all ordered, so we need
+-- at least 'Real' as a constraint. The wacky access
+-- function names are to avoid constantly colliding
+-- with the names normally used in geometric computations.
 data Real a => Point a = 
   Point { xP :: a, yP :: a } deriving Eq
 
+-- | This ordering is completely counterintuitive.
+-- It is really only intended for the polygon cracker.
+-- This is a bug and should be fixed.
 instance Real a => Ord (Point a) where
   p1 `compare` p2 = 
     cOrd p1 `compare` cOrd p2
@@ -29,12 +46,16 @@ instance Real a => Ord (Point a) where
 data Real a => Line a = 
   Line { p1L :: Point a, p2L :: Point a } deriving Eq
 
+-- | This ordering is completely counterintuitive.
+-- It is really only intended for the polygon cracker.
+-- This is a bug and should be fixed.
 instance Real a => Ord (Line a) where
   l1 `compare` l2 = 
     pOrd l1 `compare` pOrd l2
     where
       pOrd l = (y1L l, x1L l, x2L l)
 
+-- | Shorthand for 'xP' . 'p1L' . The others below are similar.
 x1L :: Real a => Line a -> a
 x1L = xP . p1L
 
@@ -47,21 +68,24 @@ x2L = xP . p2L
 y2L :: Real a => Line a -> a
 y2L = yP . p2L
 
+-- | 6-coordinate trapezoid representation.
 data Real a => Trap a = Trap {
-  y1T :: a,
-  y2T :: a,
-  x11T :: a,
-  x12T :: a,
-  x21T :: a,
-  x22T :: a }
+  y1T :: a, -- ^ Upper y
+  y2T :: a, -- ^ Lower y
+  x11T :: a, -- ^ Upper-left x
+  x12T :: a, -- ^ Upper-right x
+  x21T :: a, -- ^ Lower-left x
+  x22T :: a -- ^ Lower-right x
+}
 
--- Close the polygon off by repeating the first point at the
--- end.
+-- | Close the given polygon off by repeating the first
+-- point at the end.
 closePoly :: [Point a] -> [Point a]
 closePoly [] = error "empty poly"
 closePoly ps@(p : _) = ps ++ [p]
 
--- Trace around the polygon, which is assumed to be closed.
+-- | Trace around the polygon, which is assumed to be closed.
+-- Return the edge list.
 polyEdges :: Real a => [Point a] -> [Line a]
 polyEdges =
   sort . map orderEdge . filter nonHorizontal . makeEdges
@@ -76,7 +100,12 @@ polyEdges =
       | p1L edge < p2L edge = edge
       | otherwise = Line (p2L edge) (p1L edge)
 
--- Given all the non-horizontal edges of a
+-- | This function takes an edge list representing a
+-- polygon, and returns a collection of trapezoids defining
+-- the same filled polygon. The input edge list should be
+-- closed, and should contain no horizontal edges.
+-- 
+-- How it works: Given all the non-horizontal edges of a
 -- non-self-intersecting polygon, walk the edges off in
 -- increasing starting y / increasing starting x
 -- order. Because the polygon is non-self-intersecting,
@@ -135,10 +164,14 @@ polyEdgeTraps (e1 : e2 : es)
       x22T = x2L e2 } : 
     polyEdgeTraps (insertLine (Line (Point x1' y2) (p2L e1)) es)
 
+-- | This function takes a vertex list representing a
+-- polygon, and returns a collection of trapezoids defining
+-- the same filled polygon. The input vertex list should be
+-- closed.
 polyTraps :: RealFrac a => [Point a] -> [Trap a]
 polyTraps = polyEdgeTraps . polyEdges
 
--- Put the line into the list in its proper place.
+-- | Put the line into the list in its proper place.
 insertLine :: Real a => Line a -> [Line a] -> [Line a]
 insertLine l [] = [l]
 insertLine l el@(e : es)
@@ -147,13 +180,20 @@ insertLine l el@(e : es)
   
 -- The rest of this file is TOG-derived
 
+-- | Return the inverse of the slope of the given line.
+-- The inverse slope is chosen on the assumption that the
+-- line is not horizontal or near-horizontal, so don't.
 invSlope :: RealFrac a => Line a -> a
 invSlope l = (x2L l - x1L l) / (y2L l - y1L l)
 
 xIntercept :: Real a => Line a -> a -> a
 xIntercept l m = x1L l - m * y1L l
                      
--- XXX Does not protect itself against nearly-parallel lines.
+-- | Given two line segments, calculate the intersection
+-- point of the lines defined by the segments.  This does
+-- not protect itself against nearly-parallel lines, but
+-- does protect itself against exactly-parallel lines
+-- by returning 'Nothing'.
 intersect :: RealFrac a => Line a -> Line a -> Maybe (Point a)
 intersect l1 l2 = 
   -- x = m1y + b1
