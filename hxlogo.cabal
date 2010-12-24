@@ -29,6 +29,13 @@ tested-with: GHC == 6.12.1
 Executable hxlogo
   main-is: hxlogo.hs
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
+  ghc-options: -Wall
+  other-modules:
+    RenderLogo,
+    Data.FixedBinary,
+    Graphics.PolyUtils,
+    Graphics.XHB.Utils,
+    Graphics.XHB.XString
 
 Flag BuildAll
   Description: Build test programs and everything.
@@ -36,15 +43,18 @@ Flag BuildAll
 
 Executable test-polyutils
   main-is: test-polyutils.hs
-  other-modules: Graphics.PolyUtils
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
+  ghc-options: -Wall
   if flag(BuildAll)
     buildable: True
   else
     buildable: False
+  other-modules:
+    Graphics.PolyUtils
 
 Library
   build-depends: base >= 4.2 && < 5, xhb >= 0.3.2009.6.28 && < 1
+  ghc-options: -Wall
   exposed-modules:
     Data.FixedBinary,
     Graphics.PolyUtils,
