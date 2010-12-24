@@ -23,9 +23,15 @@ class XidLike a => DrawableLike a where
 instance DrawableLike WINDOW
 instance DrawableLike PIXMAP
 
+-- | This just gets the first screen on the display. Not a very
+-- good idea, but no one seems to use screens anymore anyhow.
 defaultScreen :: Connection -> SCREEN 
 defaultScreen = head . roots_Setup . connectionSetup
 
+-- | This is a convenience interface to 'internAtom' that
+-- handles dealing with its interface. It round-trips, so
+-- probably a version that just returns a receipt should
+-- also be provided.
 internifyAtom :: Connection -> Bool -> String -> IO ATOM
 internifyAtom c onlyIfExists s = do
   let name = xString s
@@ -37,6 +43,7 @@ internifyAtom c onlyIfExists s = do
   Right atom <- getReply atomReceipt
   return atom
 
+-- | Sync the display. This one round-trips on purpose.
 sync :: Connection -> IO ()
 sync c = do
   _ <- getInputFocus c
