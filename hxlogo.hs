@@ -126,31 +126,32 @@ handleErrors c = forkIO $ forever $ do
 showError :: SomeError -> String
 showError e = show e
 
--- Event-handling code originally from Antoine Latter
--- http://community.haskell.org/~aslatter/code/xhb/Demo.hs  
--- Now munged beyond recognition
+-- Event-handling code originally from Antoine Latter.
+--   http://community.haskell.org/~aslatter/code/xhb/Demo.hs  
+-- Now munged quite a bit.
 
 handleEvents :: EventContext -> IO ()
 handleEvents ctx = forever $ do
   e <- waitForEvent (connection_EventContext ctx)
   handleEvent ctx e
 
-data EventHandler =  forall a . Event a => EventHandler (a -> IO ())
+data EventHandler =  forall a . Event a => 
+                     EventHandler (EventContext -> a -> IO ())
 
 handleEvent :: EventContext -> SomeEvent -> IO ()
 handleEvent ctx ev = 
-  tryHandleEvent ev hs
+  tryHandleEvent ctx ev hs
   where 
-    hs = [EventHandler $ exposeHandler ctx,
-          EventHandler $ closeHandler ctx,
-          EventHandler $ resizeHandler ctx]
+    hs = [EventHandler exposeHandler,
+          EventHandler closeHandler,
+          EventHandler resizeHandler]
 
-tryHandleEvent :: SomeEvent -> [EventHandler] -> IO ()
-tryHandleEvent _ [] = return ()
-tryHandleEvent ev (EventHandler fn : hs) = do
+tryHandleEvent :: EventContext -> SomeEvent -> [EventHandler] -> IO ()
+tryHandleEvent _ _ [] = return ()
+tryHandleEvent ctx ev (EventHandler fn : hs) = do
   case fromEvent ev of
-    Just ev' -> fn ev'
-    _ -> tryHandleEvent ev hs
+    Just ev' -> fn ctx ev'
+    _ -> tryHandleEvent ctx ev hs
 
 exposeHandler :: EventContext -> ExposeEvent -> IO ()
 exposeHandler ctx e = do
