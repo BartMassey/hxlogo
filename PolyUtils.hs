@@ -1,7 +1,13 @@
 -- Copyright © 2010 Bart Massey
 -- Some code derived from material copyright The Open Group.
--- See the end of this file for license information
--- and original copyright notice.
+-- See the end of this file for original license information
+-- and copyright notice. 
+-- 
+-- All non-TOG code in this file is licensed under the
+-- "3-clause ('new') BSD License" as specified elsewhere in
+-- this distribution.  See the file COPYING in this
+-- distribution for the believed-compatible license for the
+-- remainder of this file.
 
 module PolyUtils (Point(..), Line(..), Trap(..),
                     x1L, y1L, x2L, y2L,

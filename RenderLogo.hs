@@ -1,19 +1,25 @@
 -- Copyright © 2010 Bart Massey
--- Derived from material copyright The Open Group.
--- See the end of this file for license information
--- and original copyright notice.
-
+-- Some code derived from material copyright The Open Group.
+-- See the end of this file for original license information
+-- and copyright notice. 
+-- 
+-- All non-TOG code in this file is licensed under the
+-- "3-clause ('new') BSD License" as specified elsewhere in
+-- this distribution.  See the file COPYING in this
+-- distribution for the believed-compatible license for the
+-- remainder of this file.
+-- 
 -- Draw the "official" X Window System Logo, designed by
 -- Danny Chong
 -- 
--- Written by Ollie Jones, Apollo Computer
+-- Original C written by Ollie Jones, Apollo Computer
 -- 
 -- Does some fancy stuff to make the logo look acceptable
 -- even if it is tiny.  Also makes the various linear
 -- elements of the logo line up as well as possible
 -- considering rasterization.
 -- 
--- Munged to draw anti-aliased logo using Render extension.
+-- C munged to draw anti-aliased logo using Render extension.
 -- Carl Worth, 2002-05-16
 --
 -- Reimplemented as Haskell. Bart Massey, 2010-11-11

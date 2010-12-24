@@ -1,5 +1,8 @@
-{-# LANGUAGE FlexibleInstances #-}
 -- Copyright © 2010 Bart Massey
+-- This program is licensed under the "3-clause ('new') BSD License".
+-- See the file COPYING in this distribution for license information.
+
+{-# LANGUAGE FlexibleInstances #-}
 
 import Text.Printf
 
