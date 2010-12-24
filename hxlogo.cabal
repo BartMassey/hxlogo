@@ -2,7 +2,7 @@
 -- This program is licensed under the "3-clause ('new') BSD License".
 -- See the file COPYING in this distribution for license information.
 name: hxlogo
-version: 0.1
+version: 0.1.2
 cabal-version: >= 1.2
 build-type: Simple
 license: BSD3
