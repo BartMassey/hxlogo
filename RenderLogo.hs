@@ -204,7 +204,7 @@ logoGrayPicture c w = do
         height_RECTANGLE = 1 }
   color <- logoColor pictureFormat logoGray
   fillRectangles c $ MkFillRectangles {
-        op_FillRectangles = PictOpAdd,
+        op_FillRectangles = PictOpOver,
         dst_FillRectangles = pictureId,
         color_FillRectangles = color,
         rects_FillRectangles = [rect] }
