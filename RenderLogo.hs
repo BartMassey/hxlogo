@@ -155,25 +155,35 @@ renderLogoCore c w gc width height
                 MkPOINT (round x) (round y)
       fillPoly c polyInfo
 
-logoCreatePicture :: Connection -> DRAWABLE -> PICTFORMAT -> IO PICTURE
-logoCreatePicture c drawable pictureFormat = do
+logoCreatePicture :: Connection -> DRAWABLE -> 
+                     PICTFORMINFO -> Bool -> IO PICTURE
+logoCreatePicture c drawable pictureFormat repeat = do
   pictureId <- newResource c
-  let pictureValue = toValueParam [(CPRepeat, toValue RepeatNormal)]
+  let pictureValue = 
+        case repeat of
+          True -> toValueParam [(CPRepeat, toValue RepeatNormal)]
+          False -> emptyValueParam
   let picture = MkCreatePicture {
         pid_CreatePicture = pictureId,
         drawable_CreatePicture = drawable,
-        format_CreatePicture = pictureFormat,
+        format_CreatePicture = id_PICTFORMINFO pictureFormat,
         value_CreatePicture = pictureValue }
   createPicture c picture
   return pictureId
 
-logoCOLOR :: (Word16, Word16, Word16) -> COLOR
-logoCOLOR (r, g, b) =
-  MkCOLOR {
-    red_COLOR = r,
-    green_COLOR = g,
-    blue_COLOR = b,
-    alpha_COLOR = 0xffff }
+logoColor :: PICTFORMINFO -> (Word16, Word16, Word16) -> IO COLOR
+logoColor formatInfo (r, g, b) =
+  case type_PICTFORMINFO formatInfo of
+    PictTypeIndexed -> error "indexed color displays not supported"
+    PictTypeDirect -> do
+      let MkDIRECTFORMAT rs rm gs gm bs bm as am = 
+            direct_PICTFORMINFO formatInfo
+      putStrLn $ "rs:" ++ show rs ++ " rm:" ++ show rm
+      return $ MkCOLOR {
+        red_COLOR = r,
+        green_COLOR = g,
+        blue_COLOR = b,
+        alpha_COLOR = 0xffff }
 
 logoGrayPicture :: Connection -> WINDOW -> IO PICTURE
 logoGrayPicture c w = do
@@ -186,23 +196,24 @@ logoGrayPicture c w = do
     width_CreatePixmap = 1,
     height_CreatePixmap = 1 }
   pictureFormat <- findWindowPictureFormat c w
-  pictureId <- logoCreatePicture c (toDrawable pixmap) pictureFormat
+  pictureId <- logoCreatePicture c (toDrawable pixmap) pictureFormat True
   let rect = MkRECTANGLE {
         x_RECTANGLE = 0,
         y_RECTANGLE = 0,
         width_RECTANGLE = 1,
         height_RECTANGLE = 1 }
+  color <- logoColor pictureFormat logoGray
   fillRectangles c $ MkFillRectangles {
         op_FillRectangles = PictOpAdd,
         dst_FillRectangles = pictureId,
-        color_FillRectangles = logoCOLOR logoGray,
+        color_FillRectangles = color,
         rects_FillRectangles = [rect] }
   return pictureId
                              
 logoWindowPicture :: Connection -> WINDOW -> IO PICTURE
 logoWindowPicture c w = do
   pictureFormat <- findWindowPictureFormat c w
-  logoCreatePicture c (toDrawable w) pictureFormat
+  logoCreatePicture c (toDrawable w) pictureFormat False
 
 renderLogoRender :: Connection -> PICTURE -> PICTURE ->
                     Word16 -> Word16 -> IO ()
@@ -215,7 +226,7 @@ renderLogoRender c grayPicture windowPicture width height = do
           op_Trapezoids = PictOpOver,
           src_Trapezoids = grayPicture,
           dst_Trapezoids = windowPicture,
-          mask_format_Trapezoids = formatA8,
+          mask_format_Trapezoids = id_PICTFORMINFO $ formatA8,
           src_x_Trapezoids = 0,
           src_y_Trapezoids = 0,
           traps_Trapezoids = trapPolys }
@@ -274,13 +285,13 @@ pictFormatInfo PictureFormatA1 = (1, 1, 0)
 -- XXX The component order isn't checked, so could return some
 -- freakish format.
 findStandardPictureFormat :: Connection -> 
-                             StandardPictureFormat -> IO PICTFORMAT
+                             StandardPictureFormat -> IO PICTFORMINFO
 findStandardPictureFormat c stdFmt = do
   pfReceipt <- queryPictFormats c
   Right pf <- getReply pfReceipt
   let fmts = formats_QueryPictFormatsReply pf
   let Just sf = find correctFmt fmts
-  return $ id_PICTFORMINFO sf
+  return sf
   where
     correctFmt :: PICTFORMINFO -> Bool
     correctFmt fmt =
@@ -297,14 +308,14 @@ findStandardPictureFormat c stdFmt = do
           alpha_mask_DIRECTFORMAT d == aMask
         _ -> False
       
-findWindowPictureFormat :: Connection -> WINDOW -> IO PICTFORMAT
+findWindowPictureFormat :: Connection -> WINDOW -> IO PICTFORMINFO
 findWindowPictureFormat c w = do
   waReceipt <- getWindowAttributes c w
   Right wa <- getReply waReceipt
   let visual = visual_GetWindowAttributesReply wa
   findPictureFormat c visual
   
-findPictureFormat :: Connection -> VISUALID -> IO PICTFORMAT
+findPictureFormat :: Connection -> VISUALID -> IO PICTFORMINFO
 findPictureFormat c visual = do
   pfReceipt <- queryPictFormats c
   Right pf <- getReply pfReceipt
@@ -312,8 +323,9 @@ findPictureFormat c visual = do
   let pds = concatMap depths_PICTSCREEN pss
   let pvs = concatMap visuals_PICTDEPTH pds
   let Just pv = find ((visual ==) . visual_PICTVISUAL) pvs
-  return $ format_PICTVISUAL pv
-
+  let formats = formats_QueryPictFormatsReply pf
+  let Just vf = find ((format_PICTVISUAL pv ==) . id_PICTFORMINFO) formats
+  return vf
 
 -- Copyright 1988, 1998  The Open Group
 -- 
