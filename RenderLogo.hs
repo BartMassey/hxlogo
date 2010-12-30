@@ -157,10 +157,10 @@ renderLogoCore c w gc width height
 
 logoCreatePicture :: Connection -> DRAWABLE -> 
                      PICTFORMINFO -> Bool -> IO PICTURE
-logoCreatePicture c drawable pictureFormat repeat = do
+logoCreatePicture c drawable pictureFormat repeatMode = do
   pictureId <- newResource c
   let pictureValue = 
-        case repeat of
+        case repeatMode of
           True -> toValueParam [(CPRepeat, toValue RepeatNormal)]
           False -> emptyValueParam
   let picture = MkCreatePicture {
@@ -175,10 +175,7 @@ logoColor :: PICTFORMINFO -> (Word16, Word16, Word16) -> IO COLOR
 logoColor formatInfo (r, g, b) =
   case type_PICTFORMINFO formatInfo of
     PictTypeIndexed -> error "indexed color displays not supported"
-    PictTypeDirect -> do
-      let MkDIRECTFORMAT rs rm gs gm bs bm as am = 
-            direct_PICTFORMINFO formatInfo
-      putStrLn $ "rs:" ++ show rs ++ " rm:" ++ show rm
+    PictTypeDirect ->
       return $ MkCOLOR {
         red_COLOR = r,
         green_COLOR = g,
