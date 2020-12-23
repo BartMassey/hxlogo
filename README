@@ -3,6 +3,10 @@ Copyright © 2010 Bart Massey
 This program is licensed under the "3-clause ('new') BSD License".
 See the file COPYING in this distribution for license information.
 
+Note: This code no longer compiles, since XHB has not been
+updated since 2015 and will not build today. Patches
+welcome.
+
 This lump of stuff is hxlogo, an implementation of the
 ancient and venerable xlogo program via Antoine Latter's
 most excellent XHB X Haskell Bindings. It supports the most
